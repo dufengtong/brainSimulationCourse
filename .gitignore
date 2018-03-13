@@ -6,6 +6,7 @@
 *.docx
 *.dox
 *.pdf
+ppt/
 
 # pycharm extensions
 .idea/
