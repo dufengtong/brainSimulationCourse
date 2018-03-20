@@ -7,6 +7,8 @@
 *.dox
 *.pdf
 ppt/
+docs/
+NEURON_Tutorial/
 
 # pycharm extensions
 .idea/
