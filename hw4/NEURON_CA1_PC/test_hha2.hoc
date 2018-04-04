@@ -1,0 +1,87 @@
+// Network cell template
+// CA1PyramidalCell
+// Geometry: 14 sections + axon
+// Active properties: from Poirazi et al, Neuron 2003
+// Adjusted to get more decrementing BPAP
+// BPG & VCU, 2-1-09
+
+begintemplate hha2test
+public is_art
+public init, topol, basic_shape, subsets, geom, biophys
+
+
+public soma
+
+proc init() {
+  topol()
+  subsets()
+  geom()
+  biophys()
+  geom_nseg()
+  pre_list = new List()
+}
+
+create soma
+
+
+proc basic_shape() {
+  soma {pt3dclear() pt3dadd(0, 0, 0, 1) pt3dadd(15, 0, 0, 1)}
+}
+
+objref all
+proc subsets() { local i
+  objref all
+  all = new SectionList()
+    soma all.append()
+}
+
+proc geom() {
+  soma {  L = 10  diam = 10  }
+}
+
+external lambda_f
+proc geom_nseg() {
+  forsec all { nseg = int((L/(0.1*lambda_f(100))+.9)/2)*2 + 1  }
+}
+
+proc biophys() {
+	forsec all {
+//		Rm = 28000	// Ohm.cm^2 (Migliore value)
+		Rm = 20000	// Ohm.cm^2 (Migliore value)
+	
+//		gka_soma = 0.0075
+//		gka_soma = 0.005
+		gka_soma = 0.0025
+		gh_soma = 0.00005
+	}
+
+  	soma {  
+		insert hha2  // HH mechanism with low threshold for Na spikes (-57 mV)
+       		gnabar_hha2 = 0.007
+       		gkbar_hha2  = 0.007/5
+       		gl_hha2     = 0
+       		el_hha2     = -70
+        	
+        	insert pas    			// leak conductance
+        	g_pas =  1/Rm
+
+  	}
+  	
+  	forsec all {
+		ek = -80
+		ena = 50
+		e_pas = -70
+		g_pas = 1/Rm		
+		Ra = 50
+//		Ra = 100
+//		Ra = 150
+		cm = 1
+
+  	}
+}
+
+
+func is_art() { return 0 }
+
+endtemplate hha2test
+

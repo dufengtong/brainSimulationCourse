@@ -1,0 +1,1525 @@
+// MS-DG-CA3-CA1 network model: Rhythm generation
+// DG-GC, DG-MC, DG-BC, DG-HC, CA3-PC, CA3-BC, CA3-AAC, CA3-BSC, CA3-OLM
+// CA1-PC, CA1-BC, CA1-AAC, CA1-BSC, CA1-OLM, EC-L2, EC-L3, MS-GABA-180, MS-GABA-360 (using moderate cell models)
+//
+// Updated: 13/3/2013 by Vassilis Cutsuridis 
+objref pc
+
+pc = new ParallelContext()
+
+STARTDEL = 50	// msecs
+THETA = 140	// msecs (8 Hz)
+GAMMA = 25	// msecs (40 Hz)
+   
+SIMDUR = STARTDEL + (THETA * 3)	// simulation duration (msecs)   
+
+//////////////////////////////////
+// Step 1: Define the cell classes
+//////////////////////////////////
+
+ndggcell=100		    	// DG granule cells 
+ndgmcell=2		     	// DG mossy cells
+ndgbcell=2			// DG basket cells
+ndghcell=1			// DG HIPP cells
+nca3pcell=100			// CA3 pyramidal cells
+nca3aacell=1			// CA3 axo-axonic cells 
+nca3bcell=2			// CA3 basket cells
+nca3olm=1			// CA3 OLM cells
+nECL2180=100			// EC L2 180 input
+nECL2360=100			// EC L2 360 input
+nSEP180=10			// Medial septal cells (180)
+nSEP360=10			// Medial septal cells (360)
+nca1pcell=100			// CA1 pyramidal cells (20 are active according to Amaral et al. 1990)
+nca1aacell=1			// CA1 axo-axonic cells
+nca1bcell=2			// CA1 basket cells
+nca1bscell=1			// CA1 bistratified cells
+nca1olm=1			// CA1 OLM cells
+nECL3180=100			// EC L3 180 input
+nECL3360=100			// EC L3 360 input
+
+
+ndgcell = ndggcell+ndgmcell+ndgbcell+ndghcell						// total number of DG cells
+nca3cell = nca3pcell+nca3aacell+nca3bcell+nca3olm					// total number of CA3 cells
+//nca1cell = nca1pcell+nca1bcell+nca1aacell+nca1bscell+nca1olm					// total number of CA1 cells
+nca1cell = nca1pcell+nca1bcell+nca1aacell+nca1bscell					// total number of CA1 cells
+ncell = ndgcell+nca3cell+nca1cell							// total number of cells
+nstim = nECL2180+nECL2360+nSEP180+nSEP360+nECL3180+nECL3360				// total number of inputs
+ntot = ncell+nstim
+
+
+// gid ordering: 
+//	DG-GCs:0..ndggcell-1
+//	DG-MCs:ndggcell..ndggcell+ndgmcell-1
+//	DG-BCs:ndggcell+ndgmcell..ndggcell+ndgmcell+ndgbcell-1
+//	DG-HCs:ndggcell+ndgmcell+ndgbcell..ndggcell+ndgmcell+ndgbcell+ndghcell-1
+//	CA3-PCs:ndggcell+ndgmcell+ndgbcell+ndghcell..ndggcell+ndgmcell+ndgbcell+ndghcell+nca3pcell-1
+//	etc
+// indices of first cell of each type in list "cells"
+iDGGC=0
+iDGMC=ndggcell
+iDGBC=ndggcell+ndgmcell
+iDGHC=ndggcell+ndgmcell+ndgbcell
+iCA3PC=ndggcell+ndgmcell+ndgbcell+ndghcell
+iCA3AAC=ndggcell+ndgmcell+ndgbcell+ndghcell+nca3pcell
+iCA3BC=ndggcell+ndgmcell+ndgbcell+ndghcell+nca3pcell+nca3aacell
+iCA3OLM=ndggcell+ndgmcell+ndgbcell+ndghcell+nca3pcell+nca3aacell+nca3bcell
+iCA1PC=ndggcell+ndgmcell+ndgbcell+ndghcell+nca3pcell+nca3aacell+nca3bcell+nca3olm
+iCA1AAC=ndggcell+ndgmcell+ndgbcell+ndghcell+nca3pcell+nca3aacell+nca3bcell+nca3olm+nca1pcell
+iCA1BC=ndggcell+ndgmcell+ndgbcell+ndghcell+nca3pcell+nca3aacell+nca3bcell+nca3olm+nca1pcell+nca1aacell
+iCA1BSC=ndggcell+ndgmcell+ndgbcell+ndghcell+nca3pcell+nca3aacell+nca3bcell+nca3olm+nca1pcell+nca1aacell+nca1bcell
+iECL2180=ndggcell+ndgmcell+ndgbcell+ndghcell+nca3pcell+nca3aacell+nca3bcell+nca3olm+nca1pcell+nca1aacell+nca1bcell+nca1bscell
+iECL2360=ndggcell+ndgmcell+ndgbcell+ndghcell+nca3pcell+nca3aacell+nca3bcell+nca3olm+nca1pcell+nca1aacell+nca1bcell+nca1bscell+nECL2180
+iECL3180=ndggcell+ndgmcell+ndgbcell+ndghcell+nca3pcell+nca3aacell+nca3bcell+nca3olm+nca1pcell+nca1aacell+nca1bcell+nca1bscell+nECL2180+nECL2360
+iECL3360=ndggcell+ndgmcell+ndgbcell+ndghcell+nca3pcell+nca3aacell+nca3bcell+nca3olm+nca1pcell+nca1aacell+nca1bcell+nca1bscell+nECL2180+nECL2360+nECL3180
+iSEP180=ndggcell+ndgmcell+ndgbcell+ndghcell+nca3pcell+nca3aacell+nca3bcell+nca3olm+nca1pcell+nca1aacell+nca1bcell+nca1bscell+nECL2180+nECL2360+nECL3180+nECL3360
+iSEP360=ndggcell+ndgmcell+ndgbcell+ndghcell+nca3pcell+nca3aacell+nca3bcell+nca3olm+nca1pcell+nca1aacell+nca1bcell+nca1bscell+nECL2180+nECL2360+nECL3180+nECL3360+nSEP180
+//iCA1OLM=ndggcell+ndgmcell+ndgbcell+ndghcell+nca3pcell+nca3aacell+nca3bcell+nca3olm+nECL2180+nECL2360+nSEP180+nSEP360+nca1pcell+nca1aacell+nca1bcell+nca1bscell+nECL3180+nECL3360
+
+//////////////////////////////////////////////////////////////
+// Steps 2 and 3 are to create the cells and connect the cells
+//////////////////////////////////////////////////////////////
+
+C_P = 1  	// probability of excitatory connections received by each CA1 PC
+         	// from CA3 inputs (1 gives full connectivity)
+         
+SPATT = 4	// number of active cells per pattern
+NPATT = 1	// number of stored patterns
+NSTORE = 1	// number of new patterns to store
+
+CPATT = 1	// index of cue pattern
+CFRAC = 1	// fraction of active cells in cue
+iPPC=1		// index of a pattern PC (1st patt in 5 patterns)
+iNPPC=0		// index of a non-pattern PC (1st patt in 5 patterns)
+
+strdef FDGCONN, FDGPATT, FDGSTORE, FCA3CONN, FCA3PATT, FCA3STORE, FCA1CONN, FCA1PATT, FCA1STORE	// file name of connection weights and patterns
+// (cue and EC patterns taken from FSTORE file to implement storage)
+// (use same file for FPATT and FSTORE to test recall only)
+FDGCONN = "Weights/DGwgtsN100S4P1.dat"
+FDGPATT = "Weights/DGpattsN100S4P1.dat"			// already stored patterns
+FDGSTORE = "Weights/DGpattsN100S4P1.dat"		// new patterns to store
+
+FCA3PATT = "Weights/CA3pattsN100S20P1.dat"		// already stored patterns
+FCA3CONN = "Weights/CA3wgtsN100S20P1.dat"
+FCA3STORE = "Weights/CA3pattsN100S20P1.dat"		// new patterns to store
+
+FCA1CONN = "Weights/CA1wgtsN100S20P1.dat"
+FCA1PATT = "Weights/CA1pattsN100S20P1.dat"		// already stored patterns
+FCA1STORE = "Weights/CA1pattsN100S20P1.dat"		// new patterns to store
+      
+   
+// Simple connectivity 
+// From_To = # of connections
+// *** DG ***
+ECL2180_DGGC = nECL2180  	// # of connections received by each DG GC from EC-L2-180 cells (excit)          
+ECL2180_DGBC = nECL2180  	// # of connections received by each DG BC from EC-L2-180 cells (excit)          
+ECL2180_DGMC = nECL2180  	// # of connections received by each DG MC from EC-L2-180 cells (excit) 
+
+ECL2360_DGGC = nECL2360  	// # of connections received by each DG GC from EC-L2-360 cells (excit)          
+ECL2360_DGBC = nECL2360  	// # of connections received by each DG BC from EC-L2-360 cells (excit)          
+ECL2360_DGMC = nECL2360  	// # of connections received by each DG MC from EC-L2-360 cells (excit)                
+
+SEP180_DGHC = nSEP180		// # of connections received by each DG HC from SEP 180 cells (inhib)          
+SEP360_DGBC = nSEP360		// # of connections received by each DG BC from SEP 360 cells (inhib)          
+
+DGGC_CA3PC = ndggcell		// # of connections received by each CA3 PC from DG GC cells (excit)   	
+DGGC_CA3AAC = ndggcell		// # of connections received by each CA3 AAC from DG GC cells (excit) 
+DGGC_CA3BC = ndggcell		// # of connections received by each CA3 BC from DG GC cells (excit)   	   
+
+DGGC_DGBC = ndggcell		// # of connections received by each BC cell from GCs (excit)		
+DGGC_DGHC = ndggcell		// # of connections received by each HC cell from GCs (excit)		
+DGGC_DGMC = ndggcell		// # of connections received by each MC cell from GCs (excit)		
+
+DGMC_DGGC = ndgmcell		// # of connections received by each DG GC cell from DG MCs (excit)               
+DGMC_DGMC = 1			// # of connections received by each DG MC cell from DG MCs (excit)               
+DGMC_DGHC = ndgmcell		// # of connections received by each DG HC cell from DG MCs (excit)               
+DGMC_DGBC = ndgmcell		// # of connections received by each DG BC cell from DG MCs (excit)          	
+
+DGHC_DGGC = ndghcell		// # of connections received by each DG GC cell from DG HCs (inhib)               
+DGHC_DGMC = ndghcell		// # of connections received by each DG MC cell from DG HCs (inhib)          	
+DGHC_DGBC = ndghcell		// # of connections received by each DG BC cell from DG HCs (inhib)          
+
+DGBC_DGGC = ndgbcell		// # of connections received by each DG GC cell from DG BCs (inhib)               
+DGBC_DGMC = ndgbcell		// # of connections received by each DG MC cell from DG BCs (inhib)               
+DGBC_DGBC = 1			// # of connections received by each DG BC cell from DG BCs (inhib)          
+
+// *** CA3 ***
+ECL2180_CA3PC = nECL2180 	// # of connections received by each CA3 PC from EC-L2-180 cells (excit)
+ECL2180_CA3AAC = nECL2180	// # of connections received by each CA3 AAC from EC-L2-180 cells (excit)          
+ECL2180_CA3BC = nECL2180 	// # of connections received by each CA3 BC from EC-L2-180 cells (excit)          
+
+ECL2360_CA3PC = nECL2360 	// # of connections received by each CA3 PC from EC-L2-360 cells (excit)
+ECL2360_CA3AAC = nECL2360	// # of connections received by each CA3 AAC from EC-L2-360 cells (excit)          
+ECL2360_CA3BC = nECL2360 	// # of connections received by each CA3 BC from EC-L2-360 cells (excit)                     
+        
+SEP180_CA3OLM = nSEP180		// # of connections received by each CA3 OLM from SEP 180 cells (inhib)
+SEP360_CA3AAC = nSEP360		// # of connections received by each CA3 AAC from SEP 360 cells (inhib)          
+SEP180_CA3BC = nSEP180		// # of connections received by each CA3 BC from SEP 180 cells (inhib)              
+
+CA3PC_CA3PC = 1			// # of connections received by each CA3-PC from other CA3-PCs (excit)           
+CA3PC_CA3BC = nca3pcell  	// # of connections received by each CA3-BC from CA3-PCs (excit)                   
+CA3PC_CA3AAC = nca3pcell 	// # of connections received by each CA3-BSC from CA3-PCs (excit)          
+CA3PC_CA3OLM = nca3pcell 	// # of connections received by each CA3-OLM from CA3-PCs (excit)          
+
+CA3PC_CA1PC = nca3pcell		// # of connections received by each CA1-PC from CA3-PCs (excit)           
+CA3PC_CA1BC = nca3pcell  	// # of connections received by each CA1-BC from CA3-PCs (excit)                    
+CA3PC_CA1AAC = nca3pcell 	// # of connections received by each CA1-AAC from CA3-PCs (excit) 
+CA3PC_CA1BSC = nca3pcell 	// # of connections received by each CA1-BSC from CA3-PCs (excit)          
+
+CA3PC_DGMC = nca3pcell		// # of connections received by each DG MC from CA3-PCs (excit)		   
+
+CA3BC_CA3PC = nca3bcell		// # of connections received by each CA3 PC from CA3 BCs (inhib)                    
+CA3BC_CA3OLM = nca3bcell  	// # of connections received by each CA3 OLM from CA3 BCs (inhib)          
+CA3BC_CA3BC = 1		  	// # of connections received by each CA3 BC from other CA3 BCs (inhib)     
+
+CA3AAC_CA3PC = nca3aacell	// # of connections received by each CA3 PC from CA3 AACs (inhib)          
+
+CA3OLM_CA3PC = nca3olm 		// # of connections received by each CA3 PC from CA3 OLM cells (inhib)          
+CA3OLM_CA3BC = nca3olm 		// # of connections received by each CA3 BC from CA3 OLM cells (inhib)        
+
+
+// *** CA1 ***
+ECL3180_CA1PC = nECL3180  	// # of connections received by each CA1 PC from EC-L3-180 cells (excit)          
+ECL3180_CA1BC = nECL3180  	// # of connections received by each CA1 BC from EC-L3-180 cells (excit)          
+ECL3180_CA1AAC = nECL3180 	// # of connections received by each CA1 AAC from EC-L3-180 cells (excit)     
+
+ECL3360_CA1PC = nECL3360  	// # of connections received by each CA1 PC from EC-L3-360 cells (excit)          
+ECL3360_CA1BC = nECL3360  	// # of connections received by each CA1 BC from EC-L3-360 cells (excit)          
+ECL3360_CA1AAC = nECL3360 	// # of connections received by each CA1 AAC from EC-L3-360 cells (excit)           
+
+SEP360_CA1BSC = nSEP360		// # of connections received by each CA1 BSC from SEP 360 cells (inhib)          
+SEP360_CA1OLM = nSEP360		// # of connections received by each CA1 OLM from SEP 360 cells (inhib)          
+SEP180_CA1AAC = nSEP180		// # of connections received by each CA1 AAC from SEP 180 cells (inhib)          
+SEP180_CA1BC = nSEP180		// # of connections received by each CA1 BC from SEP 180 cells (inhib)
+//SEP360_CA1AAC = nSEP360		// # of connections received by each CA1 AAC from SEP 360 cells (inhib)          
+//SEP360_CA1BC = nSEP360		// # of connections received by each CA1 BC from SEP 360 cells (inhib)          
+
+CA1PC_CA1PC = 1			// # of connections received by each CA1-PC from other CA1-PCs (excit)        
+CA1PC_CA1BC = nca1pcell  	// # of connections received by each CA1-BC from CA1-PCs (excit)          
+CA1PC_CA1BSC = nca1pcell 	// # of connections received by each CA1-BSC from CA1-PCs (excit)         
+CA1PC_CA1AAC = nca1pcell 	// # of connections received by each CA1-AAC from CA1-PCs (excit)         
+CA1PC_CA1OLM = nca1pcell 	// # of connections received by each CA1-OLM from CA1-PCs (excit)         
+
+CA1BC_CA1PC = nca1bcell		// # of connections received by each CA1 PC from CA1 BCs (inhib)          
+CA1BC_CA1BSC = nca1bcell 	// # of connections received by each CA1 BSC from CA1 BCs (inhib)          
+CA1BC_CA1OLM = nca1bcell 	// # of connections received by each CA1 OLM from CA1 BCs (inhib)          
+CA1BC_CA1BC = 1		  	// # of connections received by each CA1 BC from other CA1 BCs (inhib)          
+
+CA1AAC_CA1PC = nca1aacell	// # of connections received by each CA1 PC from CA1 AACs (inhib)          
+
+CA1BSC_CA1PC = nca1bscell	// # of connections received by each CA1 PC from CA1 BSCs (inhib)          
+CA1BSC_CA1BC = nca1bscell	// # of connections received by each CA1 BC from CA1 BSCs (inhib)          
+
+CA1OLM_CA1PC = nca1olm  	// # of connections received by each CA1 PC from CA1 OLM cells (inhib)          
+CA1OLM_CA1BC = nca1olm 		// # of connections received by each CA1 BC from CA1 OLM cells (inhib)          
+
+
+// Synaptic weights and delays
+// **** DG ****
+ECL2180DGGCCHWGT = 0.005		//0.0006				// EC-L2-180 weight (high) to DG-GC
+ECL2180DGGCCLWGT = 0.0001	  			// EC-L2-180 weight (low) to DG-GC
+ECL2180DGGCDEL = 1					// EC-L2-180 delay to DG-GC
+ECL2180DGBCWGT = 0.002		 			// EC-L2-180 weight to DG-BC
+ECL2180DGBCDEL = 1					// EC-L2-180 delay to DG-BC 
+ECL2180DGMCWGT = 0.004 / nECL2180			// EC-L2-180 weight to DG-MC
+ECL2180DGMCDEL = 1					// EC-L2-180 delay to DG-MC 
+
+ECL2360DGGCCHWGT = 0.0015	//0.00025			// EC-L2-360 weight (high) to DG-GC
+ECL2360DGGCCLWGT = 0.00008				// EC-L2-360 weight (low) to DG-GC
+ECL2360DGGCDEL = 1					// EC-L2-360 delay to DG-GC
+ECL2360DGBCWGT = 0.00008					// EC-L2-360 weight to DG-BC
+ECL2360DGBCDEL = 1					// EC-L2-360 delay to DG-BC 
+ECL2360DGMCWGT = 0.0015 / nECL2360			// EC-L2-360 weight to DG-MC
+ECL2360DGMCDEL = 1					// EC-L2-360 delay to DG-MC 
+
+SEP1802DGHCWGT = 0.06 / nSEP180				// SEP weight to DG-HCs
+SEP1802DGHCDEL = 1					// SEP delay to DG-HCs
+SEP3602DGBCWGT = 0.3 					// SEP weight to DG-BCs
+SEP3602DGBCDEL = 1					// SEP delay to DG-BCs
+
+DGMC2DGGCw = 0.001 * 2 / ndgmcell	//0.0006 * 2 / ndgmcell
+DGMC2DGGCd = 1
+DGMC2DGMCw = 0.001 * 2 / ndgmcell
+DGMC2DGMCd = 1
+DGMC2DGBCw = 0.0	//0.001 * 2 / ndgmcell
+DGMC2DGBCd = 1
+DGMC2DGHCw = 0.001 * 2 / ndgmcell
+DGMC2DGHCd = 1
+
+DGHC2DGGCw = 0.25 
+DGHC2DGGCd = 1
+DGHC2DGMCw = 0.0001 / ndghcell
+DGHC2DGMCd = 1
+DGHC2DGBCw = 0.005 / ndghcell
+DGHC2DGBCd = 1
+
+DGBC2DGGCw = 0.02
+DGBC2DGGCd = 1
+DGBC2DGMCw = 0.0095 * 2 / ndgbcell
+DGBC2DGMCd = 1
+DGBC2DGBCw = 0.0005 * 2 / ndgbcell
+DGBC2DGBCd = 1
+
+DGGC2DGMCw = 0.0005 * 3 / ndggcell
+DGGC2DGMCd = 1
+DGGC2DGBCw = 0.001 * 3 / ndggcell
+DGGC2DGBCd = 1
+DGGC2DGHCw = 0.09
+DGGC2DGHCd = 1
+
+DGGC2CA3PCCHw = 0.2 * 3 / ndggcell
+DGGC2CA3PCCLw = 0.005 * 3 / ndggcell
+DGGC2CA3PCd = 1
+DGGC2CA3AACw = 0.007 * 3 / ndggcell
+DGGC2CA3AACd = 1
+DGGC2CA3BCw = 0.08 * 3 / ndggcell
+DGGC2CA3BCd = 1
+
+
+// **** CA3 ****
+ECL2180CA3PCWGT = 0.00006				// EC-L2-180 weight to CA3-PC
+ECL2180CA3PCDEL = 1					// EC-L2-180 delay to CA3-PC
+ECL2180CA3AACWGT = 0.0004				// EC-L2-180 weight to CA3-AAC
+ECL2180CA3AACDEL = 1					// EC-L2-180 delay to CA3-AAC 
+ECL2180CA3BCWGT = 0.00008				// EC-L2-180 weight to CA3-BC
+ECL2180CA3BCDEL = 1					// EC-L2-180 delay to CA3-BC 
+
+ECL2360CA3PCWGT = 0.00002				// EC-L2-360 weight to CA3-PC
+ECL2360CA3PCDEL = 1					// EC-L2-360 delay to CA3-PC
+ECL2360CA3AACWGT = 0.00001				// EC-L2-360 weight to CA3-AAC
+ECL2360CA3AACDEL = 1					// EC-L2-360 delay to CA3-AAC 
+ECL2360CA3BCWGT = 0.00024				// EC-L2-360 weight to CA3-BC
+ECL2360CA3BCDEL = 1					// EC-L2-360 delay to CA3-BC 
+
+SEP1802CA3BCWGT = 0.05					// SEP weight to CA3-BC
+SEP1802CA3BCDEL = 1					// SEP delay to CA3-BC
+SEP1802CA3OLMWGT = 0.007				// SEP weight to CA3-OLM
+SEP1802CA3OLMDEL = 1					// SEP delay to CA3-OLM
+
+SEP3602CA3AACWGT = 2.9					// SEP weight to CA3-AAC
+SEP3602CA3AACDEL = 1					// SEP delay to CA3-AAC
+
+CA3PC2DGMCw = 0.003 * 3 / nca3pcell	//0.0009 * 3 / nca3pcell
+CA3PC2DGMCd = 1
+
+CA3PC2CA1PCCHw = 0.00025	//0.001
+CA3PC2CA1PCCLw = 0.00007
+CA3PC2CA1PCCHwn = 0.00012
+CA3PC2CA1PCd = 1
+CA3PC2CA1AACw = 0.0	//0.006 
+CA3PC2CA1AACd = 1
+CA3PC2CA1BCw = 0.0	//0.006 
+CA3PC2CA1BCd = 1
+CA3PC2CA1BSCw = 0.6
+CA3PC2CA1BSCd = 1
+
+CA3PC2CA3PCw = 0.0005 * 3 / nca3pcell
+CA3PC2CA3PCd = 1
+CA3PC2CA3AACw = 0.0	//0.00005 * 3 / nca3pcell
+CA3PC2CA3AACd = 1
+CA3PC2CA3BCw = 0.0	//0.00005  * 3 / nca3pcell
+CA3PC2CA3BCd = 1
+CA3PC2CA3OLMw = 0.0001
+CA3PC2CA3OLMd = 1
+
+CA3BC2CA3PCw = 0.5 * 2 / nca3bcell
+CA3BC2CA3PCd = 1
+CA3BC2CA3BCw = 0.005 * 2 / nca3bcell
+CA3BC2CA3BCd = 1
+CA3BC2CA3OLMw = 0.0 * 2 / nca3bcell
+CA3BC2CA3OLMd = 1
+
+CA3AAC2CA3PCw = 0.9 / nca3aacell
+CA3AAC2CA3PCd = 1
+
+CA3OLM2CA3PCw = 2.8 / nca3olm
+CA3OLM2CA3PCgbw = 0.0	//0.0004 / nca3olm
+CA3OLM2CA3PCd = 1
+CA3OLM2CA3BCw = 0.0	//0.01 / nca3olm
+CA3OLM2CA3BCd = 1
+
+
+
+// **** CA1 ****
+ECL3180CA1PCCHWGT = 0.064				// EC-L3-180 weight to CA1-PC
+ECL3180CA1PCCLWGT = 0.00001 				// EC-L3-180 weight to CA1-PC
+ECL3180CA1PCDEL = 1					// EC-L3-180 delay to CA1-PC
+ECL3180CA1AACWGT = 0.00014 				// EC-L3-180 weight to CA1-AAC
+ECL3180CA1AACDEL = 1					// EC-L3-180 delay to CA1-AAC 
+ECL3180CA1BCWGT = 0.00014 				// EC-L3-180 weight to CA1-BC
+ECL3180CA1BCDEL = 1					// EC-L3-180 delay to CA1-BC 
+
+ECL3360CA1PCCHWGT = 0.008 				// EC-L3-360 weight to CA1-PC
+ECL3360CA1PCCLWGT = 0.00001				// EC-L3-360 weight to CA1-PC
+ECL3360CA1PCDEL = 1					// EC-L3-360 delay to CA1-PC
+ECL3360CA1AACWGT = 0.00052 				// EC-L3-360 weight to CA1-AAC
+ECL3360CA1AACDEL = 1					// EC-L3-360 delay to CA1-AAC 
+ECL3360CA1BCWGT = 0.00052 				// EC-L3-360 weight to CA1-BC
+ECL3360CA1BCDEL = 1					// EC-L3-360 delay to CA1-BC 
+
+SEP1802CA1AACWGT = 0.8	 				// SEP weight to CA1-AAC
+SEP1802CA1AACDEL = 1					// SEP delay to CA1-AAC
+SEP1802CA1BCWGT = 0.8					// SEP weight to CA1-BC
+SEP1802CA1BCDEL = 1					// SEP delay to CA1-BC
+
+SEP3602CA1BSCWGT = 0.3	 				// SEP weight to CA1-BSC
+SEP3602CA1BSCDEL = 1					// SEP delay to CA1-BSC
+SEP3602CA1OLMWGT = 0.3					// SEP weight to CA1-OLM
+SEP3602CA1OLMDEL = 1					// SEP delay to CA1-OLM
+
+CA1PC2CA1PCw = 0.0001 * 3 / nca1pcell
+CA1PC2CA1PCd = 1
+CA1PC2CA1AACw = 0.0005 * 3 / nca1pcell
+CA1PC2CA1AACd = 1
+CA1PC2CA1BCw = 0.0005 * 3 / nca1pcell 
+CA1PC2CA1BCd = 1
+CA1PC2CA1BSCw = 0.0005 * 3 / nca1pcell
+CA1PC2CA1BSCd = 1
+CA1PC2CA1OLMw = 0.005 * 3 / nca1pcell
+CA1PC2CA1OLMd = 1
+
+CA1BC2CA1PCw = 0.09
+CA1BC2CA1PCd = 1
+CA1BC2CA1BCw = 0.01
+CA1BC2CA1BCd = 1
+CA1BC2CA1BSCw = 0.08
+CA1BC2CA1BSCd = 1
+CA1BC2CA1OLMw = 0.0 * 2 / nca1bcell
+CA1BC2CA1OLMd = 1
+
+CA1AAC2CA1PCw = 0.09
+CA1AAC2CA1PCd = 1
+
+CA1BSC2CA1PCw = 0.2	
+CA1BSC2CA1PCd = 1
+CA1BSC2CA1PCgbw = 0.08 / nca1bscell
+CA1BSC2CA1PCgbd = 1
+CA1BSC2CA1BCw = 0.06 / nca1bscell
+CA1BSC2CA1BCd = 1
+
+CA1OLM2CA1PCw = 0.04
+CA1OLM2CA1PCgbw = 0.0	//0.0004 / nca1olm
+CA1OLM2CA1PCd = 1
+CA1OLM2CA1BCw = 0.0	//0.01 / nca1olm
+CA1OLM2CA1BCd = 1
+
+
+// Synapse indices
+// onto DG GCs
+E_EC_GC = 0		// EC AMPA to gcdend1[3] (2 of)
+E_MC_GC = 2		// MC AMPA to gcdend1[1] (2 of)
+I_HC_GC = 4		// HIPP GABA-A to gcdend1[3] (2 of)
+I_BC_GC = 6		// BC GABA-A to GC soma 
+EM_EC_GC = 9		// EC-L2 AMPA modifiable (STDP) to DG GC dist dendrites (2 of)
+
+// onto DG MCs
+E_EC_MC = 0		// EC AMPA to mcdend1[3] (4 of)
+E_GC_MC = 4		// GC AMPA to mcdend1[0] (4 of)
+E_MC_MC = 8		// MC AMPA to mcdend1[0] (4 of)
+I_BC_MC = 12		// BC GABA-A to MC soma
+I_HC_MC = 13		// HIPP GABA-A to mcdend1[2] (4 of)
+E_CA3PC_MC = 17		// CA3 PC AMPA to mcdend1[0] (4 of) 
+
+// onto DG BCs
+E_EC_BC = 0		// EC AMPA to bcdend1[3] (2 of)
+E_GC_BC = 2		// GC AMPA to bcdend1[0] (4 of)
+E_MC_BC = 6		// MC AMPA to bcdend1[1] (2 of)
+I_BC_BC = 8		// BC GABA-A to bddend1[1] (2 of)
+I_HC_BC = 10		// HIPP GABA-A to bcdend1[3] (2 of)
+I_SEP180_BC = 12	// SEP180 GABA-A to BC soma
+I_SEP360_BC = 12	// SEP360 GABA-A to BC soma
+
+// onto DG HCs
+E_GC_HC = 0		// GC AMPA to hcdend1[0] (4 of)
+E_MC_HC = 4		// MC AMPA to hcdend1[1] (4 of)
+I_SEP180_HC = 8		// SEP180 GABA-A to HC soma
+I_SEP360_HC = 8		// SEP360 GABA-A to HC soma
+
+// onto CA3 PCs
+E_ECL2_CA3PC = 0	// EC AMPA to CA3 PC LM dendrites (8 of)
+E_GC_CA3PC = 8		// GC AMPA to CA3 PC SR prox dendrites (4 of)
+EN_GC_CA3PC = 12	// GC NMDA to CA3 PC SR prox dendrites (4 of)
+E_CA3PC_CA3PC = 16	// CA3 PC recurrent AMPA to CA3 PC SR med dendrites (4 of)
+I_BC_CA3PC = 20		// BC GABA-A to CA3 PC soma
+I_AAC_CA3PC = 21	// AAC GABA-A to CA3 PC axon
+I_OLM_CA3PC = 22	// OLM GABA-A to CA3 PC LM dendrites (8 of)
+IB_OLM_CA3PC = 30	// OLM GABA-B to CA3 PC LM dendrites (8 of)
+
+// onto CA1 PCs
+//E_ECL3_CA1PC = 0	// EC AMPA to CA1 PC LM dendrites (2 of)  *** DON'T USE THIS (USE INSTEAD FROM 26 ONWARDS) *** 
+//E_CA3PC_CA1PC = 2	// CA3 AMPA to CA1 PC SR med dendrites  *** DON'T USE THIS (USE INSTEAD FROM 44 ONWARDS) ***  
+//EN_CA3PC_CA1PC = 3	// CA3 NMDA to CA1 PC SR med dendrites  *** DON'T USE THIS (USE INSTEAD FROM 53 ONWARDS) ***  
+E_CA1PC_CA1PC = 4	// CA1 PC recurrent AMPA to CA1 PC SR med dendrites 
+I_BC_CA1PC = 5		// BC GABA-A to CA1 PC soma
+I_AAC_CA1PC = 6		// AAC GABA-A to CA1 PC axon
+I_OLM_CA1PC = 7		// OLM GABA-A to CA1 PC LM dendrites (2 of)
+IB_OLM_CA1PC = 9	// OLM GABA-B to CA1 PC LM dendrites (2 of)
+I_BSC_CA1PC = 11	// BSC GABA-A to CA1 PC SR med dendrites (6 of GABA-A)
+IB_BSC_CA1PC = 17	// BSC GABA-B to CA1 PC SR med dendrites (6 of GABA-B)
+E_ECL3_CA1PC = 23	// EC AMPA to CA1 PC LM dendrites (18 of)
+E_CA3PC_CA1PC = 41	// CA3 AMPA to CA1 PC SR med dendrites (9 of)
+EN_CA3PC_CA1PC = 50	// CA3 NMDA to CA1 PC SR med dendrites (5 of)
+EN_ECL3_CA1PC = 55	// EC NMDA to CA1 PC LM thick dendrites (2 of)
+
+// onto CA3/CA1 INs (CA3/CA1 BC, CA3/CA1 AAC, CA3/CA1 BSC)
+EI_EC = 0	// EC AMPA excit (2 of; not onto BSC)
+EI_CA3 = 2	// CA3 AMPA excit (4 of)
+EI_PC = 6	// CA3/CA1 PC AMPA excit (2 of)
+II_SAME = 8	// inhib from neighbouring INs (BC->BC; BSC->BSC)
+II_OPP = 9	// inhib from other INs (BSC->BC; BC->BSC)
+II_SEP = 10	// GABA-A inhib from septum (2 of)
+IIB_SEP = 12	// GABA_B inhib from septum (2 of)
+EI_GC = 14	// DG GC AMPA excit (2 of)
+
+// onto CA3/CA1 INs (CA3/CA1 OLM)
+EO_PC = 0	// CA3/CA1 PC AMPA excit to OLM dendrites (2 of)
+IO_IN = 2	// Septal GABA-A to OLM soma
+IOB_IN = 3	// Septal GABA-B to OLM soma
+
+// Background excitation (theta spiking)
+ENUM = 4	// number of spikes
+ESTART = 0	// time of first spike
+EINT = 10	// spike ISI
+ENOISE = 1	// ISI noise
+EWGT = 0.001	// excitatory weights (AMPA)
+ENWGT = 0.002	// excitatory weights (NMDA)
+EDEL = 1	// delay (msecs)
+
+// EC-L2-180 excitation
+ECL2180NUM = 1000			// number of EC-L2-180 spikes
+ECL2180START = STARTDEL			// time of first EC-L2-180 spike
+ECL2180INT = THETA 			// EC-L2-180 spike ISI 
+ECL2180NOISE = 0.08			// EC-L2-180 ISI noise
+//ECL2180NOISE = 0.0			// EC-L2-180 ISI noise
+ECL2180BINT = THETA  			// EC-L2-180 interburst interval
+ECL2180BLEN = THETA / 2			// EC-L2-180 burst length
+
+// EC-L2-360 excitation
+ECL2360NUM = 1000			// number of EC-L2-360 spikes
+ECL2360START = STARTDEL	+ (THETA / 2)	// time of first EC-L2-360 spike
+ECL2360INT = THETA 			// EC-L2-360 spike ISI 
+ECL2360NOISE = 0.08			// EC-L2-360 ISI noise
+//ECL2360NOISE = 0.0			// EC-L2-360 ISI noise
+ECL2360BINT = THETA 			// EC-L2-360 interburst interval
+ECL2360BLEN = THETA / 2			// EC-L2-360 burst length
+
+// EC-L3-180 excitation
+ECL3180NUM = 1000			// number of EC-L3-180 spikes
+ECL3180START = STARTDEL			// time of first EC-L3-180 spike
+ECL3180INT = THETA			// EC-L3-180 spike ISI (during burst)
+//ECL3180NOISE = 0.0			// EC-L3-180 ISI noise
+ECL3180NOISE = 0.08			// EC-L3-180 ISI noise
+ECL3180BINT = THETA			// EC-L3-180 interburst interval
+ECL3180BLEN = THETA / 2			// EC-L3-180 burst length
+
+// EC-L3-360 excitation
+ECL3360NUM = 1000			// number of EC-L3-360 spikes
+ECL3360START = STARTDEL + (THETA / 2)	// time of first EC-L3-360 spike
+ECL3360INT = THETA			// EC-L3-360 spike ISI (during burst)
+//ECL3360NOISE = 0.0			// EC-L3-360 ISI noise
+ECL3360NOISE = 0.08			// EC-L3-360 ISI noise
+ECL3360BINT = THETA			// EC-L3-360 interburst interval
+ECL3360BLEN = THETA / 2			// EC-L3-360 burst length
+
+// Septal 180 inhibition
+SEP180NUM = 1000	   		// number of SEP spikes
+SEP180START = STARTDEL			// time of first SEP 180 spike
+SEP180INT = THETA			// SEP spike ISI (during burst)
+//SEP180NOISE = 0.0			// SEP ISI noise
+SEP180NOISE = 0.08			// SEP ISI noise
+SEP180BINT = THETA / 2 			// SEP interburst interval
+SEP180BLEN = THETA / 2			// SEP burst length
+
+// Septal 360 inhibition
+SEP360NUM = 1000			// number of SEP spikes
+SEP360START = STARTDEL + (THETA / 2)	// time of first SEP spike
+SEP360INT = THETA 			// SEP spike ISI (during burst)
+//SEP360NOISE = 0.0			// SEP ISI noise
+SEP360NOISE = 0.08			// SEP ISI noise
+SEP360BINT = THETA / 2 			// SEP interburst interval
+SEP360BLEN = THETA / 2			// SEP burst length
+
+// EC excitation
+ECPATT = 1	// index of output pattern
+
+
+connect_random_low_start_ = 1  // low seed for mcell_ran4_init()
+
+objref cells, nclist, ncslist, ncelist, ncilist  // cells will be a List that holds 
+  // all instances of network cells that exist on this host
+  // nclist will hold all NetCon instances that exist on this host
+  // and connect network spike sources to targets on this host (nclist)
+  // ncslist holds NetConns from input spike sources (NetStims)
+objref ranlist  // for RandomStreams on this host
+objref stims, stimlist, cuelist, cuelistECL2180, cuelistECL2360, cuelistECL3180, cuelistECL3360, ECL2list, ECL2180list, ECL2360list, ECL3180list, ECL3360list, EClist	
+objref gidvec  // to associate gid and position in cells List
+  // useful for setting up connections and reporting connectivity
+
+
+// Make the network
+proc mknet() {
+
+  	print "Make cells..."
+  	mkcells()  // create the cells
+  
+  	print "Make inputs..."
+  	mkinputs()  // create the CA3, EC and septal inputs
+    
+  	print "Connect cells..."
+  
+  	mcell_ran4_init(connect_random_low_start_)						
+  	nclist = new List()
+  
+  	print "****   DG   ****"
+  	print "   EC..."
+  	// EC-L2-180 to DG-GC  	
+	//connectcells(ndggcell, iDGGC, nECL2180, iECL2180, ECL2180_DGGC, E_EC_GC, E_EC_GC+1, ECL2180DGGCDEL, ECL2180DGGCCHWGT)  
+  	//connectcells(ndggcell, iDGGC, nECL2180, iECL2180, ECL2180_DGGC, EM_EC_GC, EM_EC_GC+1, ECL2180DGGCDEL, ECL2180DGGCWGT)
+  	// EC-L2-180 to DG-BC
+  	connectcells(ndgbcell, iDGBC, nECL2180, iECL2180, ECL2180_DGBC, E_EC_BC, E_EC_BC+1, ECL2180DGBCDEL, ECL2180DGBCWGT)  
+  	// EC-L2-180 to DG-MC
+  	//connectcells(ndgmcell, iDGMC, nECL2180, iECL2180, ECL2180_DGMC, E_EC_MC, E_EC_MC+3, ECL2180DGMCDEL, ECL2180DGMCWGT)  
+  
+  	// EC-L2-360 to DG-GC
+  	//connectcells(ndggcell, iDGGC, nECL2360, iECL2360, ECL2360_DGGC, E_EC_GC, E_EC_GC+1, ECL2360DGGCDEL, ECL2360DGGCCHWGT)
+  	//connectcells(ndggcell, iDGGC, nECL2360, iECL2360, ECL2360_DGGC, EM_EC_GC, EM_EC_GC+1, ECL2360DGGCDEL, ECL2360DGGCWGT)  
+  	// EC-L2-360 to DG-BC
+  	connectcells(ndgbcell, iDGBC, nECL2360, iECL2360, ECL2360_DGBC, E_EC_BC, E_EC_BC+1, ECL2360DGBCDEL, ECL2360DGBCWGT)  
+  	// EC-L2-360 to DG-MC
+  	//connectcells(ndgmcell, iDGMC, nECL2360, iECL2360, ECL2360_DGMC, E_EC_MC, E_EC_MC+3, ECL2360DGMCDEL, ECL2360DGMCWGT)    
+  
+  	print "   SEP180..."
+  	// SEP180 to DG-HC
+  	connectcells(ndghcell, iDGHC, nSEP180, iSEP180, SEP180_DGHC, I_SEP180_HC, I_SEP180_HC, SEP1802DGHCDEL, SEP1802DGHCWGT)  
+
+ 	print "   SEP360..."
+  	// SEP360 to DG-BC
+  	connectcells(ndgbcell, iDGBC, nSEP360, iSEP360, SEP360_DGBC, I_SEP360_BC, I_SEP360_BC, SEP3602DGBCDEL, SEP3602DGBCWGT)  
+   
+  	print "   GC..."
+  	//DG-GC to DG-BC
+  	connectcells(ndgbcell, iDGBC, ndggcell, iDGGC, DGGC_DGBC, E_GC_BC, E_GC_BC+3, DGGC2DGBCd, DGGC2DGBCw)  
+  	//DG-GC to DG-MC
+  	connectcells(ndgmcell, iDGMC, ndggcell, iDGGC, DGGC_DGMC, E_GC_MC, E_GC_MC+3, DGGC2DGMCd, DGGC2DGMCw)  
+  	//DG-GC to DG-HC
+  	connectcells(ndghcell, iDGHC, ndggcell, iDGGC, DGGC_DGHC, E_GC_HC, E_GC_HC+3, DGGC2DGHCd, DGGC2DGHCw)  
+  
+ 	print "   INs..."
+  	//DG-MC to DG-GC
+  	connectcells(ndggcell, iDGGC, ndgmcell, iDGMC, DGMC_DGGC, E_MC_GC, E_MC_GC+1, DGMC2DGGCd, DGMC2DGGCw)  
+  	//DG-MC to DG-BC
+  	connectcells(ndgbcell, iDGBC, ndgmcell, iDGMC, DGMC_DGBC, E_MC_BC, E_MC_BC+1, DGMC2DGBCd, DGMC2DGBCw)  
+  	//DG-MC to DG-MC
+  	connectcells(ndgmcell, iDGMC, ndgmcell, iDGMC, DGMC_DGMC, E_MC_MC, E_MC_MC+3, DGMC2DGMCd, DGMC2DGMCw) 
+  	//DG-MC to DG-HC
+  	connectcells(ndghcell, iDGHC, ndgmcell, iDGMC, DGMC_DGHC, E_MC_HC, E_MC_HC+3, DGMC2DGHCd, DGMC2DGHCw)  
+  	//DG-BC to DG-GC
+  	connectcells(ndggcell, iDGGC, ndgbcell, iDGBC, DGBC_DGGC, I_BC_GC, I_BC_GC, DGBC2DGGCd, DGBC2DGGCw)  
+  	//DG-BC to DG-BC
+  	connectcells(ndgbcell, iDGBC, ndgbcell, iDGBC, DGBC_DGBC, I_BC_BC, I_BC_BC+1, DGBC2DGBCd, DGBC2DGBCw)  
+  	//DG-BC to DG-MC
+  	connectcells(ndgmcell, iDGMC, ndgbcell, iDGBC, DGBC_DGMC, I_BC_MC, I_BC_MC, DGBC2DGMCd, DGBC2DGMCw)  
+  	//DG-HC to DG-GC
+  	connectcells(ndggcell, iDGGC, ndghcell, iDGHC, DGHC_DGGC, I_HC_GC, I_HC_GC+1, DGHC2DGGCd, DGHC2DGGCw)  
+  	//DG-HC to DG-BC
+  	connectcells(ndgbcell, iDGBC, ndghcell, iDGHC, DGHC_DGBC, I_HC_BC, I_HC_BC+1, DGHC2DGBCd, DGHC2DGBCw)  
+  	//DG-HC to DG-MC
+  	connectcells(ndgmcell, iDGMC, ndghcell, iDGHC, DGHC_DGMC, I_HC_MC, I_HC_MC+3, DGHC2DGMCd, DGHC2DGMCw)  
+  
+  
+	print "****   CA3   ****"
+  	print "   EC..."
+  	// EC-L2-180 to CA3-PC
+  	connectcells(nca3pcell, iCA3PC, nECL2180, iECL2180, ECL2180_CA3PC, E_ECL2_CA3PC, E_ECL2_CA3PC+7, ECL2180CA3PCDEL, ECL2180CA3PCWGT)
+  	//connectcells(nca3pcell, iCA3PC, nECL2180, iECL2180, ECL2180_CA3PC, EM_ECL2_CA3PC, EM_ECL2_CA3PC+7, ECL2180CA3PCDEL, ECL2180CA3PCWGT)
+  	// EC-L2-180 to CA3-AAC
+  	connectcells(nca3aacell, iCA3AAC, nECL2180, iECL2180, ECL2180_CA3AAC, EI_EC, EI_EC+1, ECL2180CA3AACDEL, ECL2180CA3AACWGT)
+  	// EC-L2-180 to CA3-BC
+  	connectcells(nca3bcell, iCA3BC, nECL2180, iECL2180, ECL2180_CA3BC, EI_EC, EI_EC+1, ECL2180CA3BCDEL, ECL2180CA3BCWGT)
+  
+  	// EC-L2-360 to CA3-PC
+  	connectcells(nca3pcell, iCA3PC, nECL2360, iECL2360, ECL2360_CA3PC, E_ECL2_CA3PC, E_ECL2_CA3PC+7, ECL2360CA3PCDEL, ECL2360CA3PCWGT)
+  	//connectcells(nca3pcell, iCA3PC, nECL2360, iECL2360, ECL2360_CA3PC, EM_ECL2_CA3PC, EM_ECL2_CA3PC+7, ECL2360CA3PCDEL, ECL2360CA3PCWGT)
+  	// EC-L2-360 to CA3-AAC
+  	connectcells(nca3aacell, iCA3AAC, nECL2360, iECL2360, ECL2360_CA3AAC, EI_EC, EI_EC+1, ECL2360CA3AACDEL, ECL2360CA3AACWGT)
+  	// EC-L2-360 to CA3-BC
+  	connectcells(nca3bcell, iCA3BC, nECL2360, iECL2360, ECL2360_CA3BC, EI_EC, EI_EC+1, ECL2360CA3BCDEL, ECL2360CA3BCWGT)
+    
+  	print "   SEP180..."
+  	// SEP180 to CA3-BC
+  	connectcells(nca3bcell, iCA3BC, nSEP180, iSEP180, SEP180_CA3BC, II_SEP, II_SEP+1, SEP1802CA3BCDEL, SEP1802CA3BCWGT)
+  	// SEP180 to CA3-OLM
+  	connectcells(nca3olm, iCA3OLM, nSEP180, iSEP180, SEP180_CA3OLM, IO_IN, IO_IN, SEP1802CA3OLMDEL, SEP1802CA3OLMWGT)
+  
+  	print "   SEP360..."
+  	// SEP360 to CA3-AAC
+  	connectcells(nca3aacell, iCA3AAC, nSEP360, iSEP360, SEP360_CA3AAC, II_SEP, II_SEP+1, SEP3602CA3AACDEL, SEP3602CA3AACWGT)
+
+
+  	print "   GC..."
+  	// DG-GC to CA3-PC
+	connectDGGCtoCA3PC(nca3pcell, iCA3PC, ndggcell, iDGGC, DGGC_CA3PC, E_GC_CA3PC, E_GC_CA3PC+3, DGGC2CA3PCd, DGGC2CA3PCCHw, ECPATT, NPATT)		// AMPA
+  	connectDGGCtoCA3PC(nca3pcell, iCA3PC, ndggcell, iDGGC, DGGC_CA3PC, EN_GC_CA3PC, EN_GC_CA3PC+3, DGGC2CA3PCd, DGGC2CA3PCCHw, ECPATT, NPATT)	// NMDA
+	//connectDGGC2CA3PC(FDGPATT, FCA3PATT, ECPATT, NPATT, E_GC_CA3PC, E_GC_CA3PC+3)	
+  	//connectcells(nca3pcell, iCA3PC, ndggcell, iDGGC, DGGC_CA3PC, E_GC_CA3PC, E_GC_CA3PC+3, DGGC2CA3PCd, DGGC2CA3PCw)
+  	//connectcells(nca3pcell, iCA3PC, ndggcell, iDGGC, DGGC_CA3PC, EM_GC_CA3PC, EM_GC_CA3PC+3, DGGC2CA3PCd, DGGC2CA3PCw)  
+  	// DG-GC to CA3-AAC
+  	connectcells(nca3aacell, iCA3AAC, ndggcell, iDGGC, DGGC_CA3AAC, EI_GC, EI_GC+1, DGGC2CA3AACd, DGGC2CA3AACw)  
+  	// DG-GC to CA3-BC
+  	connectcells(nca3bcell, iCA3BC, ndggcell, iDGGC, DGGC_CA3BC, EI_GC, EI_GC+1, DGGC2CA3BCd, DGGC2CA3BCw)  
+
+  	print "   CA3-PC..."
+  	// CA3-PC to CA3-PC
+  	connectcells(nca3pcell, iCA3PC, nca3pcell, iCA3PC, CA3PC_CA3PC, E_CA3PC_CA3PC, E_CA3PC_CA3PC, CA3PC2CA3PCd, CA3PC2CA3PCw)
+  	//connectCA3pcells(nca3pcell, iCA3PC, nca3pcell, iCA3PC, CA3PC_CA3PC, E_CA3PC_CA3PC, E_CA3PC_CA3PC, CA3PC2CA3PCd, CA3PC2CA3PCw)
+  	// CA3-PC to CA3-BC
+  	connectcells(nca3bcell, iCA3BC, nca3pcell, iCA3PC, CA3PC_CA3BC, EI_PC, EI_PC+1, CA3PC2CA3BCd, CA3PC2CA3BCw)
+  	// CA3-PC to CA3-AAC
+  	connectcells(nca3aacell, iCA3AAC, nca3pcell, iCA3PC, CA3PC_CA3AAC, EI_PC, EI_PC+1, CA3PC2CA3AACd, CA3PC2CA3AACw)
+  	// CA3-PC to CA3-OLM
+  	connectcells(nca3olm, iCA3OLM, nca3pcell, iCA3PC, CA3PC_CA3OLM, EO_PC, EO_PC+1, CA3PC2CA3OLMd, CA3PC2CA3OLMw)
+  	// CA3-PC to DG-MC
+  	connectcells(ndgmcell, iDGMC, nca3pcell, iCA3PC, CA3PC_DGMC, E_CA3PC_MC, E_CA3PC_MC+3, CA3PC2DGMCd, CA3PC2DGMCw)
+  
+
+  	print "   CA3-INs..."
+  	// CA3-BC to CA3-PC
+  	connectcells(nca3pcell, iCA3PC, nca3bcell, iCA3BC, CA3BC_CA3PC, I_BC_CA3PC, I_BC_CA3PC, CA3BC2CA3PCd, CA3BC2CA3PCw)
+  	// CA3-BC to CA3-BC
+  	connectcells(nca3bcell, iCA3BC, nca3bcell, iCA3BC, CA3BC_CA3BC, II_SAME, II_SAME, CA3BC2CA3BCd, CA3BC2CA3BCw)
+  	// CA3-AAC to CA3-PC
+  	connectcells(nca3pcell, iCA3PC, nca3aacell, iCA3AAC, CA3AAC_CA3PC, I_AAC_CA3PC, I_AAC_CA3PC, CA3AAC2CA3PCd, CA3AAC2CA3PCw)
+  	// CA3-OLM to CA3-PC
+  	connectcells(nca3pcell, iCA3PC, nca3olm, iCA3OLM, CA3OLM_CA3PC, I_OLM_CA3PC, I_OLM_CA3PC+7, CA3OLM2CA3PCd, CA3OLM2CA3PCw)
+  	//connectcells(nca3pcell, iCA3PC, nca3olm, iCA3OLM, CA3OLM_CA3PC, IB_OLM_CA3PC, IB_OLM_CA3PC+7, CA3OLM2CA3PCd, CA3OLM2CA3PCgbw)
+ 
+
+
+  	print "****   CA1   ****"
+  	print "   EC..."
+  	//// EC-L3-180 to CA1-PC
+  	//connectcells(nca1pcell, iCA1PC, nECL3180, iECL3180, ECL3180_CA1PC, E_ECL3_CA1PC, E_ECL3_CA1PC+1, ECL3180CA1PCDEL, ECL3180CA1PCWGT)
+  	////connectcells(nca1pcell, iCA1PC, nECL3180, iECL3180, ECL3180_CA1PC, EM_ECL3_CA1PC, EM_ECL3_CA1PC+1, ECL3180CA1PCDEL, ECL3180CA1PCWGT)
+  	// EC-L3-180 to CA1-AAC
+  	connectcells(nca1aacell, iCA1AAC, nECL3180, iECL3180, ECL3180_CA1AAC, EI_EC, EI_EC+1, ECL3180CA1AACDEL, ECL3180CA1AACWGT)
+  	// EC-L3-180 to CA1-BC
+  	connectcells(nca1bcell, iCA1BC, nECL3180, iECL3180, ECL3180_CA1BC, EI_EC, EI_EC+1, ECL3180CA1BCDEL, ECL3180CA1BCWGT)
+  
+	//// EC-L3-360 to CA1-PC
+	//connectcells(nca1pcell, iCA1PC, nECL3360, iECL3360, ECL3360_CA1PC, E_ECL3_CA1PC, E_ECL3_CA1PC+1, ECL3360CA1PCDEL, ECL3360CA1PCWGT)
+	////connectcells(nca1pcell, iCA1PC, nECL3360, iECL3360, ECL3360_CA1PC, EM_ECL3_CA1PC, EM_ECL3_CA1PC+1, ECL3360CA1PCDEL, ECL3360CA1PCWGT)
+	// EC-L3-360 to CA1-AAC
+	connectcells(nca1aacell, iCA1AAC, nECL3360, iECL3360, ECL3360_CA1AAC, EI_EC, EI_EC+1, ECL3360CA1AACDEL, ECL3360CA1AACWGT)
+	// EC-L3-360 to CA1-BC
+	connectcells(nca1bcell, iCA1BC, nECL3360, iECL3360, ECL3360_CA1BC, EI_EC, EI_EC+1, ECL3360CA1BCDEL, ECL3360CA1BCWGT)
+	  
+	print "   SEP180..."
+	// SEP180 to CA1-AAC 
+	connectcells(nca1aacell, iCA1AAC, nSEP180, iSEP180, SEP180_CA1AAC, II_SEP, II_SEP+1, SEP1802CA1AACDEL, SEP1802CA1AACWGT)
+	// SEP180 to CA1-BC 
+	connectcells(nca1bcell, iCA1BC, nSEP180, iSEP180, SEP180_CA1BC, II_SEP, II_SEP+1, SEP1802CA1BCDEL, SEP1802CA1BCWGT)
+
+	print "   SEP360..."
+	// SEP360 to CA1-BSC 
+	connectcells(nca1bscell, iCA1BSC, nSEP360, iSEP360, SEP360_CA1BSC, II_SEP, II_SEP+1, SEP3602CA1BSCDEL, SEP3602CA1BSCWGT)
+//	// SEP360 to CA1-OLM 
+//	connectcells(nca1olm, iCA1OLM, nSEP360, iSEP360, SEP360_CA1OLM, IO_IN, IO_IN, SEP3602CA1OLMDEL, SEP3602CA1OLMWGT) 
+
+
+	print "   CA3..."
+	// CA3-PC to CA1-PC
+	connectCA3PCtoCA1PC(nca1pcell, iCA1PC, nca3pcell, iCA3PC, CA3PC_CA1PC, E_CA3PC_CA1PC, E_CA3PC_CA1PC+8, CA3PC2CA1PCd, CA3PC2CA1PCCHw, ECPATT, NPATT)
+	connectCA3PCtoCA1PC(nca1pcell, iCA1PC, nca3pcell, iCA3PC, CA3PC_CA1PC, EN_CA3PC_CA1PC, EN_CA3PC_CA1PC+4, CA3PC2CA1PCd, CA3PC2CA1PCCHwn, ECPATT, NPATT)
+	//connectCA3PCtoCA1PC(nca1pcell, iCA1PC, nca3pcell, iCA3PC, CA3PC_CA1PC, EM_CA3PC_CA1PC, EM_CA3PC_CA1PC+8, CA3PC2CA1PCd, CA3PC2CA1PCCHw, ECPATT, NPATT)
+	//connectCA3PCtoCA1PC(nca1pcell, iCA1PC, nca3pcell, iCA3PC, CA3PC_CA1PC, E_CA3PC_CA1PC, E_CA3PC_CA1PC, CA3PC2CA1PCd, CA3PC2CA1PCCHw)
+	//connectCA3PCtoCA1PC(nca1pcell, iCA1PC, nca3pcell, iCA3PC, CA3PC_CA1PC, EM_CA3PC_CA1PC, EM_CA3PC_CA1PC, CA3PC2CA1PCd, CA3PC2CA1PCCHw)
+	// CA3-PC to CA1-AAC
+	connectcells(nca1aacell, iCA1AAC, nca3pcell, iCA3PC, CA3PC_CA1AAC, EI_GC, EI_GC+1, CA3PC2CA1AACd, CA3PC2CA1AACw)
+	// CA3-PC to CA1-BC
+	connectcells(nca1bcell, iCA1BC, nca3pcell, iCA3PC, CA3PC_CA1BC, EI_GC, EI_GC+1, CA3PC2CA1BCd, CA3PC2CA1BCw)
+	// CA3-PC to CA1-BSC
+	connectcells(nca1bscell, iCA1BSC, nca3pcell, iCA3PC, CA3PC_CA1BSC, EI_GC, EI_GC+1, CA3PC2CA1BSCd, CA3PC2CA1BSCw)
+
+	print "   CA1-PC..."
+	// CA1-PC to CA1-PC
+	connectCA1pcells(nca1pcell, iCA1PC, nca1pcell, iCA1PC, CA1PC_CA1PC, E_CA1PC_CA1PC, E_CA1PC_CA1PC, CA1PC2CA1PCd, CA1PC2CA1PCw)
+//	// CA1-PC to CA1-BC
+//	//connectcells(nca1bcell, iCA1BC, nca1pcell, iCA1PC, CA1PC_CA1BC, EI_PC, EI_PC+1, CA1PC2CA1BCd, CA1PC2CA1BCw)
+//	// CA1-PC to CA1-AAC
+//	//connectcells(nca1aacell, iCA1AAC, nca1pcell, iCA1PC, CA1PC_CA1AAC, EI_PC, EI_PC+1, CA1PC2CA1AACd, CA1PC2CA1AACw)
+//	// CA1-PC to CA1-BSC
+//	//connectcells(nca1bscell, iCA1BSC, nca1pcell, iCA1PC, CA1PC_CA1BSC, EI_PC, EI_PC+1, CA1PC2CA1BSCd, CA1PC2CA1BSCw)
+//	// CA1-PC to CA1-OLM
+//	connectcells(nca1olm, iCA1OLM, nca1pcell, iCA1PC, CA1PC_CA1OLM, EO_PC, EO_PC+1, CA1PC2CA1OLMd, CA1PC2CA1OLMw)
+
+	print "   CA1-INs..."
+	// CA1-BC to CA1-PC
+	connectcells(nca1pcell, iCA1PC, nca1bcell, iCA1BC, CA1BC_CA1PC, I_BC_CA1PC, I_BC_CA1PC, CA1BC2CA1PCd, CA1BC2CA1PCw)
+	// CA1-BC to CA1-BC
+	connectcells(nca1bcell, iCA1BC, nca1bcell, iCA1BC, CA1BC_CA1BC, II_SAME, II_SAME, CA1BC2CA1BCd, CA1BC2CA1BCw)
+	// CA1-BC to CA1-BSC
+	connectcells(nca1bscell, iCA1BSC, nca1bcell, iCA1BC, CA1BC_CA1BSC, II_OPP, II_OPP, CA1BC2CA1BSCd, CA1BC2CA1BSCw)
+	// CA1-AAC to CA1-PC
+	connectcells(nca1pcell, iCA1PC, nca1aacell, iCA1AAC, CA1AAC_CA1PC, I_AAC_CA1PC, I_AAC_CA1PC, CA1AAC2CA1PCd, CA1AAC2CA1PCw)
+	// CA1-BSC to CA1-PC
+	connectcells(nca1pcell, iCA1PC, nca1bscell, iCA1BSC, CA1BSC_CA1PC, I_BSC_CA1PC+2, I_BSC_CA1PC+2, CA1BSC2CA1PCd, CA1BSC2CA1PCw)			// GABA-A
+	//connectcells(nca1pcell, iCA1PC, nca1bscell, iCA1BSC, CA1BSC_CA1PC, IB_BSC_CA1PC+1, IB_BSC_CA1PC+3, CA1BSC2CA1PCgbd, CA1BSC2CA1PCgbw)		// GABA-B
+	// CA1-BSC to CA1-BC
+	connectcells(nca1bcell, iCA1BC, nca1bscell, iCA1BSC, CA1BSC_CA1BC, II_OPP, II_OPP, CA1BSC2CA1BCd, CA1BSC2CA1BCw)
+	// CA1-OLM to CA1-PC
+	//connectcells(nca1pcell, iCA1PC, nca1olm, iCA1OLM, CA1OLM_CA1PC, I_OLM_CA1PC, I_OLM_CA1PC+2, CA1OLM2CA1PCd, CA1OLM2CA1PCw)			// GABA-A
+	//connectcells(nca1pcell, iCA1PC, nca1olm, iCA1OLM, CA1OLM_CA1PC, IB_OLM_CA1PC, IB_OLM_CA1PC+2, CA1OLM2CA1PCd, CA1OLM2CA1PCgbw)			// GABA-B
+
+
+  	print "Connect inputs..."
+  	// EC-L2 input to GCs
+	//connectECL2DG(FDGPATT, ECPATT, NPATT, E_EC_GC, E_EC_GC+1) 		// with fixed synapses
+	//connectECL2DG(FDGPATT, ECPATT, NSTORE, EM_EC_GC, EM_EC_GC+1) 		// store new pattern
+
+	print "Connect EC-L2 to DG-GC"
+  	connectECL2toDG($s1, $2, E_EC_GC, E_EC_GC+1)				// with fixed synapses
+  	//connectECL2toDG($s1, $2, EM_EC_GC, EM_EC_GC+1)			// with modifiable synapses
+
+  	// EC-L3 input to CA1-PCs
+	print "Connect EC-L3 to CA1-PC"
+	connectECL3toCA1PC(FCA1CONN, 1, E_ECL3_CA1PC, E_ECL3_CA1PC+17)	 		// with fixed synapses
+	//connectECL3toCA1PC(FCA1CONN, 1, EN_ECL3_CA1PC, EN_ECL3_CA1PC+1) 		// with fixed synapses
+	//connectECL3toCA1PC(FCA1PATT, ECPATT, NSTORE, EM_ECL3_CA1PC, EM_ECL3_CA1PC+17) 			// store new pattern
+}
+
+
+// creates the cells and appends them to a List called cells
+// argument is the number of cells to be created
+proc mkcells() {local i,j  localobj cell, nc, nil
+  	cells = new List()
+  	ranlist = new List()
+  	gidvec = new Vector()
+  	// each host gets every nhost'th cell,
+  	// starting from the id of the host
+  	// and continuing until no more cells are left
+  	for i=0, ntot {
+		if (i < iDGMC) {
+			cell = new GranuleCell()		// DG Granule cell
+		} else if (i < iDGBC) {
+			cell = new MossyCell()			// DG Mossy cell
+		} else if (i < iDGHC) {
+			cell = new BC()				// DG Basket cell
+		} else if (i < iCA3PC) {
+			cell = new HIPPCell()			// DG HIPP cell
+		} else if (i < iCA3AAC) {
+			cell = new CA3PyramidalCell()		// CA3 Pyramidal cell
+		} else if (i < iCA3BC) {
+			cell = new CA3AACell()			// CA3 Axoaxonic cell
+		} else if (i < iCA3OLM) {
+			cell = new CA3BasketCell()		// CA3 Basket cell
+		} else if (i < iCA1PC) {
+			cell = new CA3OLMCell()			// CA3 OLM cell
+		} else if (i < iCA1AAC) {
+			cell = new CA1PyramidalCell()		// CA1 Pyramidal cell
+		} else if (i < iCA1BC) {
+			cell = new CA1AACell()			// CA1 Axo-axonic cell
+		} else if (i < iCA1BSC) {
+			cell = new CA1BasketCell()		// CA1 Basket cell
+ 		} else if (i < iECL2180) {
+			cell = new CA1BistratifiedCell()	// CA1 Bistratified cell
+    		} else if (i < iECL2360) {
+			cell = new StimCell()			// EC-L2-180
+		} else if (i < iECL3180) {
+			cell = new StimCell()			// EC-L2-360
+		} else if (i < iECL3360) {
+			cell = new StimCell()			// EC-L3-180		
+		} else if (i < iSEP180) {
+			cell = new StimCell()			// EC-L3-360
+		} else if (i < iSEP360) {
+			cell = new BurstCell()			// SEP 180 input
+		} else {
+//		} else if (i < iCA1OLM) {
+			cell = new BurstCell()			// SEP 360 input
+//		} else {
+//			cell = new CA1OLMCell()			// CA1 OLM cell
+		}
+	
+    		cells.append(cell)
+    		pc.set_gid2node(i, pc.id)  // associate gid i with this host
+    		nc = cell.connect2target(nil)  // attach spike detector to cell
+    		pc.cell(i, nc)  // associate gid i with spike detector
+    		ranlist.append(new RandomStream(i))  // ranlist.o(i) corresponds to
+    		gidvec.append(i)
+  	}
+}
+
+
+// reports distribution of cells across hosts
+proc report_gidvecs() { local i, rank
+  	pc.barrier()  // wait for all hosts to get to this point
+  	if (pc.id==0) printf("\ngidvecs on the various hosts\n")
+  	for rank=0, pc.nhost-1 {  // host 0 first, then 1, 2, etc.
+    		if (rank==pc.id) {
+      			print "host ", pc.id
+      			gidvec.printf()
+    		}
+    		pc.barrier()  // wait for all hosts to get to this point
+  	}
+}
+
+// sets the CA3, EC and Septal background inputs
+proc mkinputs() {local i localobj stim, rs
+  	for i=0, cells.count-1 {
+    		gid = gidvec.x[i]	// id of cell	
+    		if (gid >= iECL2180 && gid < iECL2180+nECL2180) {		// appropriate target cell
+    			// set background activity for excitatory inputs
+    			stim = cells.object(i).stim
+			//stim.number = ECL2180NUM
+			//stim.start = ECL2180START
+			//stim.interval = ECL2180INT
+			//stim.noise = ECL2180NOISE
+			//stim.burstint = ECL2180BINT
+			//stim.burstlen = ECL2180BLEN
+    			stim.number = ECL2180NUM
+    			stim.start = ECL2180START
+    			stim.interval = ECL2180INT
+    			stim.noise = ECL2180NOISE
+    		}
+    		if (gid >= iECL2360 && gid < iECL2360+nECL2360) {		// appropriate target cell
+    			// set background activity for excitatory inputs
+    			stim = cells.object(i).stim
+			//stim.number = ECL2360NUM
+			//stim.start = ECL2360START
+			//stim.interval = ECL2360INT
+			//stim.noise = ECL2360NOISE
+			//stim.burstint = ECL2360BINT
+			//stim.burstlen = ECL2360BLEN
+    			stim.number = ECL2360NUM
+    			stim.start = ECL2360START
+    			stim.interval = ECL2360INT
+    			stim.noise = ECL2360NOISE
+    		}
+    		if (gid >= iSEP180 && gid < iSEP180+nSEP180) {			// appropriate target cell
+    			// set background activity for septum
+    			stim = cells.object(i).stim
+    			stim.number = SEP180NUM
+    			stim.start = SEP180START
+    			stim.interval = SEP180INT
+    			stim.noise = SEP180NOISE
+    			stim.burstint = SEP180BINT
+    			stim.burstlen = SEP180BLEN
+    		}
+    		if (gid >= iSEP360 && gid < iSEP360+nSEP360) {			// appropriate target cell
+    			// set background activity for septum
+    			stim = cells.object(i).stim
+    			stim.number = SEP360NUM
+    			stim.start = SEP360START
+    			stim.interval = SEP360INT
+    			stim.noise = SEP360NOISE
+    			stim.burstint = SEP360BINT
+    			stim.burstlen = SEP360BLEN
+		}
+		if (gid >= iECL3180 && gid < iECL3180+nECL3180) {		// appropriate target cell
+    			stim = cells.object(i).stim
+			//stim.number = ECL3180NUM
+			//stim.start = ECL3180START
+			//stim.interval = ECL3180INT
+			//stim.noise = ECL3180NOISE
+			//stim.burstint = ECL3180BINT
+			//stim.burstlen = ECL3180BLEN
+    			stim.number = ECL3180NUM
+    			stim.start = ECL3180START
+    			stim.interval = ECL3180INT
+    			stim.noise = ECL3180NOISE
+		}
+		if (gid >= iECL3360 && gid < iECL3360+nECL3360) {		// appropriate target cell
+    			stim = cells.object(i).stim
+    			rs = ranlist.object(i)
+			//stim.number = ECL3360NUM
+			//stim.start = ECL3360START
+			//stim.interval = ECL3360INT
+			//stim.noise = ECL3360NOISE
+			//stim.burstint = ECL3360BINT
+			//stim.burstlen = ECL3360BLEN
+    			stim.number = ECL3360NUM
+    			stim.start = ECL3360START
+    			stim.interval = ECL3360INT
+    			stim.noise = ECL3360NOISE
+    			// Use the gid-specific random generator so random streams are
+    			// independent of where and how many stims there are.
+    			stim.noiseFromRandom(rs.r)
+    			rs.r.negexp(1)
+    			rs.start()
+    		}
+  	}
+}
+
+
+
+// connects the EC input layer to GC cells
+// read active GCs from pattern file
+// all-to-all connectivity between EC and GC pattern cells
+// appends the GC NetCons to a List called ncelist
+proc connectECL2DG() {local i, j1, j2, gid, ncue  localobj cue, cstim, syn, src, nc, fp, target
+  	ncelist = new List()
+  	// open patterns file
+  	fp = new File($s1)
+  	fp.ropen()
+  	cue = new Vector(ndggcell)
+  	cue.scanf(fp, $2, $3)	// read pattern
+  	fp.close()
+  	ncue = 0
+  	// find active cells in pattern
+  	for i=0, cue.size()-1 {
+    		//if (!pc.gid_exists(i+iDGGC)) { continue }
+    		if (cue.x[i] == 1) {
+      			print "Pattern cell ", i
+      			//target = pc.gid2cell(i+iDGGC)
+      			target = cells.object(i+iDGGC)
+      			// target synapses
+      			for k = $4, $5 {
+        			syn = target.pre_list.object(k)	// excitatory synapse
+        			// create pattern stimulus
+        			for j1=0, nECL2180-1 {
+          				src = cells.object(j1+iECL2180).stim
+          				// set up connection from source to target
+          				//nc = pc.gid_connect(j+iEC, syn)
+          				nc = new NetCon(src, syn)
+          				ncelist.append(nc)
+          				nc.delay = ECL2180DGGCDEL
+          				nc.weight = ECL2180DGGCCHWGT
+        			}
+        			for j2=0, nECL2360-1 {
+          				src = cells.object(j2+iECL2360).stim
+          				// set up connection from source to target
+          				//nc = pc.gid_connect(j+iEC, syn)
+          				nc = new NetCon(src, syn)
+          				ncelist.append(nc)
+          				nc.delay = ECL2360DGGCDEL
+          				nc.weight = ECL2360DGGCCHWGT
+        			}
+      			}
+    		} else {
+			//print "Non-pattern cell ", i
+      			//target = pc.gid2cell(i+iDGGC)
+      			target = cells.object(i+iDGGC)
+      			// target synapses
+      			for k = $4, $5 {
+        			syn = target.pre_list.object(k)	// excitatory synapse
+        			// create pattern stimulus
+        			for j1=0, nECL2180-1 {
+          				src = cells.object(j1+iECL2180).stim
+          				// set up connection from source to target
+          				//nc = pc.gid_connect(j+iEC, syn)
+          				nc = new NetCon(src, syn)
+          				ncelist.append(nc)
+          				nc.delay = ECL2180DGGCDEL
+          				nc.weight = ECL2180DGGCCLWGT
+        			}
+        			for j2=0, nECL2360-1 {
+          				src = cells.object(j2+iECL2360).stim
+          				// set up connection from source to target
+          				//nc = pc.gid_connect(j+iEC, syn)
+          				nc = new NetCon(src, syn)
+          				ncelist.append(nc)
+          				nc.delay = ECL2360DGGCDEL
+          				nc.weight = ECL2360DGGCCLWGT
+        			}
+      			}
+		}
+  	}
+}
+
+
+// connects the EC-L2 input layer to output cells (DG-GCs and INs)
+// read DG-GC connections from a file, with connections to
+// a target being a column with index i for target cell i
+// appends the DG-GC NetCons to a List called ncslist
+proc connectECL2toDG() {local i, j1, j2, cp, gid  localobj src, syn, synN, nc, fc, rs, conns, rc
+  	cp = $2	// connection probability
+  	mcell_ran4_init(connect_random_low_start_)
+  	conns = new Vector(nECL2180)  // connection weights
+  	rc = new Vector(nECL2180)  // random physical connectivity
+  	ncslist = new List()
+  
+  	// inputs to DG-GCs determined by weight matrix
+  	for i=0, cells.count-1 {	// loop over possible target cells
+    		gid = gidvec.x[i]	// id of cell
+    		if (gid >= iDGGC && gid < ndggcell+iDGGC) {	// appropriate target cell
+    			//print "cell ", gid
+			for k = $3, $4 {    			
+				syn = cells.object(i).pre_list.object(k)	// AMPA synapse with STDP
+    				rs = ranlist.object(i)  // the corresponding RandomStream
+    				rs.start()
+    				rs.r.uniform(0, 1)  // return integer in range 0..1
+    				rc.setrand(rs.r)	// generate random connectivity
+    				// open connections file
+    				fc = new File($s1)
+    				fc.ropen()
+    				conns.scanf(fc, gid+1, nECL2180)	// read incoming weights for cell gid
+    				fc.close()
+    				for j1=0, nECL2180-1 {
+      					// only connection if physical connection exists
+      					if (rc.x[j1] <= cp) {
+        					//print "   src ", j
+        					src = cells.object(j1+iECL2180).stim
+        					// high AMPA if weight is 1
+        					if (conns.x[j1] == 1) {
+          						// set up connection from source to target
+          						//nc = pc.gid_connect(j1+iECL2180, syn)
+          						nc = new NetCon(src, syn)
+          						ncslist.append(nc)
+          						nc.delay = ECL2180DGGCDEL
+          						nc.weight = ECL2180DGGCCHWGT
+        					} else {
+          						// set up connection from source to target
+          						//nc = pc.gid_connect(j1+iECL2180, syn)
+          						nc = new NetCon(src, syn)
+          						ncslist.append(nc)
+          						nc.delay = ECL2180DGGCDEL
+          						nc.weight = ECL2180DGGCCLWGT
+        					}
+      					}
+    				}
+    				for j2=0, nECL2360-1 {
+      					// only connection if physical connection exists
+      					if (rc.x[j2] <= cp) {
+        					//print "   src ", j
+        					src = cells.object(j2+iECL2360).stim
+        					// high AMPA if weight is 1
+        					if (conns.x[j2] == 1) {
+          						// set up connection from source to target
+          						//nc = pc.gid_connect(j2+iECL2360, syn)
+          						nc = new NetCon(src, syn)
+          						ncslist.append(nc)
+          						nc.delay = ECL2360DGGCDEL
+          						nc.weight = ECL2360DGGCCHWGT
+        					} else {
+          						// set up connection from source to target
+          						//nc = pc.gid_connect(j2+iECL2360, syn)
+          						nc = new NetCon(src, syn)
+          						ncslist.append(nc)
+          						nc.delay = ECL2360DGGCDEL
+          						nc.weight = ECL2360DGGCCLWGT
+        					}
+      					}
+    				}
+			}			
+    		}
+  	}
+}
+
+
+
+// Target cells receive "convergence" number of inputs from
+// the pool of source cells (only one input per source cell at most)
+// ("convergence" not reached if no. of sources < convergence)
+// connectcells(number of targets, first target cell, 
+//		number of source cells, first source cell, 
+//		convergence, first synapse,
+//		last synapse, connection delay, weight)
+// appends the NetCons to a List called nclist
+objref f
+strdef fn
+proc connectDGGCtoCA3PC() {local i, j, k, gid, nsyn, r  localobj syn, nc, rs, u, rr, vca3pc, ca3pc, conns, fp 	
+	// initialize the pseudorandom number generator
+  	u = new Vector($3)  // for sampling without replacement
+	conns = new Vector(nca3pcell)	
+	jj = 0
+  	for i=0, cells.count-1 {	// loop over possible target cells
+    		gid = gidvec.x[i]	// id of cell
+    		if (gid >= $2 && gid < $2+$1) {	// appropriate CA3-PC target cell
+		  	// open CA3-PC active cells file
+			fp = new File(FCA3CONN)
+			fp.ropen()	  	
+			conns.scanf(fp, gid-iCA3PC+1, nca3pcell)	// read pattern
+			fp.close()
+//			print "conns.size = ", conns.size(), "gid-iCA3PC+1 = ", gid-iCA3PC+1
+			if (conns.x[jj] == 1) {
+//				print "jj = ", jj, "pattern ca3 cell = ", conns.x[jj]
+				//if (gid == ca3pc.x[jj]) {
+				//f.printf("%d\n", 1)				
+				//print "pattern ca3-pc = ", i - iCA3PC				
+				print "jj = ", jj, "i = ", i, ", gid = ", gid, ", pattern ca3 cell = ", conns.x[jj]
+				//print "i = ", i, "gid = ", gid, "pattern ca3pc.x[jj] = ", ca3pc.x[jj]
+				rs = ranlist.object(i)  // RandomStream for cells.object(i)
+		      		rs.start()
+		      		rs.r.discunif($4, $4+$3-1)  // return source cell index
+		      		u.fill(0)  // u.x[i]==1 means spike source i has already been chosen
+		      		nsyn = 0
+
+		      		while (nsyn < $5 && nsyn < $3) {
+		        		r = rs.repick()
+				
+		        		// no self-connection and only one connection from any source
+		        		if (r != gidvec.x[i]) if (u.x[r-$4] == 0) {
+		          			// target synapses
+		          			for j = $6, $7 {
+		            				// set up connection from source to target
+		            				syn = cells.object(i).pre_list.object(j)
+		            				nc = pc.gid_connect(r, syn)
+		            				nclist.append(nc)
+		            				nc.delay = DGGC2CA3PCd
+		            				nc.weight = DGGC2CA3PCCHw
+		          			}
+		          			u.x[r-$4] = 1
+		          			nsyn += 1
+		        		}
+		      		}
+				//jj = jj + 1
+			} else {
+				print "jj = ", jj, "non-pattern ca3 cell = ", conns.x[jj]
+				//f.printf("%d\n", 0)
+				//print "non-pattern ca3-pc = ", i - iCA3PC	
+				rs = ranlist.object(i)  // RandomStream for cells.object(i)
+		      		rs.start()
+		      		rs.r.discunif($4, $4+$3-1)  // return source cell index
+		      		u.fill(0)  // u.x[i]==1 means spike source i has already been chosen
+		      		nsyn = 0
+
+		      		while (nsyn < $5 && nsyn < $3) {
+		        		r = rs.repick()
+				
+		        		// no self-connection and only one connection from any source
+		        		if (r != gidvec.x[i]) if (u.x[r-$4] == 0) {
+		          			// target synapses
+		          			for j = $6, $7 {
+		            				// set up connection from source to target
+		            				syn = cells.object(i).pre_list.object(j)
+		            				nc = pc.gid_connect(r, syn)
+		            				nclist.append(nc)
+		            				nc.delay = DGGC2CA3PCd
+		            				nc.weight = DGGC2CA3PCCLw
+		          			}
+		          			u.x[r-$4] = 1
+		          			nsyn += 1
+		        		}
+		      		}			
+			}
+			jj = jj + 1
+    		}
+  	}
+	//fp.close()
+}
+
+
+// Target cells receive "convergence" number of inputs from
+// the pool of source cells (only one input per source cell at most)
+// ("convergence" not reached if no. of sources < convergence)
+// connectcells(number of targets, first target cell, 
+//		number of source cells, first source cell, 
+//		convergence, first synapse,
+//		last synapse, connection delay, weight)
+// appends the NetCons to a List called nclist
+proc connectcells() {local i, j, gid, nsyn, r  localobj syn, nc, rs, u
+  	// initialize the pseudorandom number generator
+  	u = new Vector($3)  // for sampling without replacement
+  	for i=0, cells.count-1 {	// loop over possible target cells
+    		gid = gidvec.x[i]	// id of cell
+    		if (gid >= $2 && gid < $1+$2) {	// appropriate target cell
+      			rs = ranlist.object(i)  // RandomStream for cells.object(i)
+      			rs.start()
+      			rs.r.discunif($4, $4+$3-1)  // return source cell index
+      			u.fill(0)  // u.x[i]==1 means spike source i has already been chosen
+      			nsyn = 0
+      			while (nsyn < $5 && nsyn < $3) {
+        			r = rs.repick()
+        			// no self-connection and only one connection from any source
+        			if (r != gidvec.x[i]) if (u.x[r-$4] == 0) {
+          				// target synapses
+          				for j = $6, $7 {
+            					// set up connection from source to target
+            					syn = cells.object(i).pre_list.object(j)
+            					nc = pc.gid_connect(r, syn)
+            					nclist.append(nc)
+            					nc.delay = $8
+            					nc.weight = $9
+          				}
+          				u.x[r-$4] = 1
+          				nsyn += 1
+        			}
+      			}
+    		}
+  	}
+}
+
+
+// Target cells receive "convergence" number of inputs from
+// the pool of source cells (only one input per source cell at most)
+// ("convergence" not reached if no. of sources < convergence)
+// connectCA3pcells(number of targets, first target cell, 
+//		number of source cells, first source cell, 
+//		convergence, first synapse,
+//		last synapse, connection delay, weight)
+// appends the NetCons to a List called nclist
+proc connectCA3pcells() {local i, j, C_E, gid, nsyn, r  localobj syn, nc, rs, u
+  	C_E = 0.1 * nca3pcell
+  	// initialize the pseudorandom number generator
+  	u = new Vector($3)  // for sampling without replacement
+  	for i=0, cells.count-1 {	// loop over possible target cells
+    		gid = gidvec.x[i]	// id of cell
+    		if (gid >= $2 && gid < $1+$2) {	// appropriate target cell
+      			rs = ranlist.object(i)  // RandomStream for cells.object(i)
+      			rs.start()
+      			rs.r.discunif($4, $4+$3-1)  // return source cell index
+      			u.fill(0)  // u.x[i]==1 means spike source i has already been chosen
+      			nsyn = 0
+      			while (nsyn < C_E) {  // C_E: 10% of nca3pcell randomly selected
+        			r = rs.repick()
+        			// no self-connection and only one connection from any source
+        			if (r != gidvec.x[i]) if (u.x[r-$4] == 0) {
+          				// target synapses
+          				for j = $6, $7 {
+            					// set up connection from source to target
+            					syn = cells.object(i).pre_list.object(j)
+            					nc = pc.gid_connect(r, syn)
+            					nclist.append(nc)
+            					nc.delay = $8
+            					nc.weight = $9
+          				}
+          				u.x[r-$4] = 1
+          				nsyn += 1
+        			}
+      			}
+    		}
+  	}
+}
+
+
+// Target cells receive "convergence" number of inputs from
+// the pool of source cells (only one input per source cell at most)
+// ("convergence" not reached if no. of sources < convergence)
+// connectCA1pcells(number of targets, first target cell, 
+//		number of source cells, first source cell, 
+//		convergence, first synapse,
+//		last synapse, connection delay, weight)
+// appends the NetCons to a List called nclist
+proc connectCA1pcells() {local i, j, C_E, gid, nsyn, r  localobj syn, nc, rs, u
+  	C_E = 0.011 * nca1pcell
+  	// initialize the pseudorandom number generator
+  	u = new Vector($3)  // for sampling without replacement
+  	for i=0, cells.count-1 {	// loop over possible target cells
+    		gid = gidvec.x[i]	// id of cell
+    		if (gid >= $2 && gid < $1+$2) {	// appropriate target cell
+      			rs = ranlist.object(i)  // RandomStream for cells.object(i)
+      			rs.start()
+      			rs.r.discunif($4, $4+$3-1)  // return source cell index
+      			u.fill(0)  // u.x[i]==1 means spike source i has already been chosen
+      			nsyn = 0
+      			while (nsyn < C_E) {  // C_E: 1% of nca1pcell randomly selected
+        			r = rs.repick()
+        			// no self-connection and only one connection from any source
+        			if (r != gidvec.x[i]) if (u.x[r-$4] == 0) {
+          				// target synapses
+          				for j = $6, $7 {
+            					// set up connection from source to target
+            					syn = cells.object(i).pre_list.object(j)
+            					nc = pc.gid_connect(r, syn)
+            					nclist.append(nc)
+            					nc.delay = $8
+            					nc.weight = $9
+          				}
+          				u.x[r-$4] = 1
+          				nsyn += 1
+        			}
+      			}
+    		}
+  	}
+}
+
+// connects the EC-L3 input layer to output cells (CA1-PCs and INs)
+// read CA1-PC connections from a file, with connections to
+// a target being a column with index i for target cell i
+// appends the CA1-PC NetCons to a List called ncslist
+proc connectECL3toCA1PC() {local i, j1, j2, cp, gid  localobj src, syn, synN, nc, fc, rs, conns, rc
+  	cp = $2	// connection probability
+  	mcell_ran4_init(connect_random_low_start_)
+  	conns = new Vector(nECL3180)  // connection weights
+  	rc = new Vector(nECL3180)  // random physical connectivity
+  	ncilist = new List()
+  
+  	// inputs to CA1-PCs determined by weight matrix
+  	for i=0, cells.count-1 {	// loop over possible target cells
+    		gid = gidvec.x[i]	// id of cell
+    		if (gid >= iCA1PC && gid < nca1pcell+iCA1PC) {	// appropriate target cell  			
+			//print "cell ", gid
+			for k = $3, $4 {
+				syn = cells.object(i).pre_list.object(k)	// AMPA synapse with STDP
+	    			rs = ranlist.object(i)  // the corresponding RandomStream
+	    			rs.start()
+	    			rs.r.uniform(0, 1)  // return integer in range 0..1
+	    			rc.setrand(rs.r)	// generate random connectivity
+	    			// open connections file
+	    			fc = new File(FCA1CONN)
+	    			fc.ropen()
+	    			conns.scanf(fc, gid-iCA1PC+1, nECL3180)	// read incoming weights for cell gid
+	    			fc.close()
+				//print "conns.size = ", conns.size(), "gid-iCA1PC+1 = ", gid-iCA1PC+1 
+	    			for j1 = 0, nECL3180-1 {
+	      				// only connection if physical connection exists
+	      				if (rc.x[j1] <= cp) {
+	        				//print "   src ", j
+	        				src = cells.object(j1+iECL3180).stim
+	        				// high AMPA if weight is 1
+	        				if (conns.x[j1] == 1) {
+	          					// set up connection from source to target
+	          					// nc = pc.gid_connect(j1+iECL3180, syn)
+							//print "pattern CA1 cell ", gid-iCA1PC+1
+	          					nc = new NetCon(src, syn)
+	          					ncilist.append(nc)
+	          					nc.weight = ECL3180CA1PCCHWGT
+	          					nc.delay = ECL3180CA1PCDEL
+	        				} else {
+	          					// set up connection from source to target
+	          					// nc = pc.gid_connect(j1+iECL3180, syn)	
+	          					nc = new NetCon(src, syn)
+	          					ncilist.append(nc)
+		          				nc.weight = ECL3180CA1PCCLWGT
+		          				nc.delay = ECL3180CA1PCDEL
+						}
+	        			}
+	      			}
+		    		for j2=0, nECL3360-1 {
+		      			// only connection if physical connection exists
+		      			if (rc.x[j2] <= cp) {
+		        			//print "   src ", j
+		        			src = cells.object(j2+iECL3360).stim
+		        			// high AMPA if weight is 1
+		        			if (conns.x[j2] == 1) {
+		          				// set up connection from source to target
+		          				// nc = pc.gid_connect(j2+iECL3360, syn)	
+		          				nc = new NetCon(src, syn)
+		          				ncilist.append(nc)
+			        			nc.weight = ECL3360CA1PCCHWGT
+			        			nc.delay = ECL3360CA1PCDEL	
+		        			} else {
+		          				// set up connection from source to target
+		          				// nc = pc.gid_connect(j2+iECL3360, syn)
+		          				nc = new NetCon(src, syn)
+		          				ncilist.append(nc)
+			        			nc.weight = ECL3360CA1PCCLWGT
+			        			nc.delay = ECL3360CA1PCDEL
+						}
+	        			}
+	      			}
+	    		}			
+	    	}
+	}
+}
+
+
+// Target cells receive "convergence" number of inputs from
+// the pool of source cells (only one input per source cell at most)
+// ("convergence" not reached if no. of sources < convergence)
+// connectcells(number of targets, first target cell, 
+//		number of source cells, first source cell, 
+//		convergence, first synapse,
+//		last synapse, connection delay, weight)
+// appends the NetCons to a List called nclist
+objref f
+strdef fn
+proc connectCA3PCtoCA1PC() {local i, j, k, gid, nsyn, r  localobj syn, nc, rs, u, rr, vca1pc, ca1pc, conns, fp 	
+	// initialize the pseudorandom number generator
+  	u = new Vector($3)  // for sampling without replacement
+	conns = new Vector(nca1pcell)	
+	jj = 0
+  	for i=0, cells.count-1 {	// loop over possible target cells
+    		gid = gidvec.x[i]	// id of cell
+    		if (gid >= $2 && gid < $2+$1) {	// appropriate CA1-PC target cell
+		  	// open CA1-PC active cells file
+			fp = new File(FCA1CONN)
+			fp.ropen()	  	
+			conns.scanf(fp, gid-iCA1PC+1, nca1pcell)	// read pattern
+			fp.close()
+//			print "conns.size = ", conns.size(), "gid-iCA1PC+1 = ", gid-iCA1PC+1
+			if (conns.x[jj] == 1) {
+//				print "jj = ", jj, "pattern ca1 cell = ", conns.x[jj]
+				//if (gid == ca1pc.x[jj]) {
+				//f.printf("%d\n", 1)				
+				//print "pattern ca1-pc = ", i - iCA1PC				
+				print "jj = ", jj, "i = ", i, ", gid = ", gid, ", pattern ca1 cell = ", conns.x[jj]
+				//print "i = ", i, "gid = ", gid, "pattern ca1pc.x[jj] = ", ca1pc.x[jj]
+				rs = ranlist.object(i)  // RandomStream for cells.object(i)
+		      		rs.start()
+		      		rs.r.discunif($4, $4+$3-1)  // return source cell index
+		      		u.fill(0)  // u.x[i]==1 means spike source i has already been chosen
+		      		nsyn = 0
+
+		      		while (nsyn < $5 && nsyn < $3) {
+		        		r = rs.repick()
+				
+		        		// no self-connection and only one connection from any source
+		        		if (r != gidvec.x[i]) if (u.x[r-$4] == 0) {
+		          			// target synapses
+		          			for j = $6, $7 {
+		            				// set up connection from source to target
+		            				syn = cells.object(i).pre_list.object(j)
+		            				nc = pc.gid_connect(r, syn)
+		            				nclist.append(nc)
+		            				nc.delay = CA3PC2CA1PCd
+		            				nc.weight = CA3PC2CA1PCCHw
+		          			}
+		          			u.x[r-$4] = 1
+		          			nsyn += 1
+		        		}
+		      		}
+				//jj = jj + 1
+			} else {
+				//print "jj = ", jj, "non-pattern ca1 cell = ", conns.x[jj]
+				//f.printf("%d\n", 0)
+				//print "non-pattern ca1-pc = ", i - iCA1PC	
+				rs = ranlist.object(i)  // RandomStream for cells.object(i)
+		      		rs.start()
+		      		rs.r.discunif($4, $4+$3-1)  // return source cell index
+		      		u.fill(0)  // u.x[i]==1 means spike source i has already been chosen
+		      		nsyn = 0
+
+		      		while (nsyn < $5 && nsyn < $3) {
+		        		r = rs.repick()
+				
+		        		// no self-connection and only one connection from any source
+		        		if (r != gidvec.x[i]) if (u.x[r-$4] == 0) {
+		          			// target synapses
+		          			for j = $6, $7 {
+		            				// set up connection from source to target
+		            				syn = cells.object(i).pre_list.object(j)
+		            				nc = pc.gid_connect(r, syn)
+		            				nclist.append(nc)
+		            				nc.delay = CA3PC2CA1PCd
+		            				nc.weight = CA3PC2CA1PCCLw
+		          			}
+		          			u.x[r-$4] = 1
+		          			nsyn += 1
+		        		}
+		      		}			
+			}
+			jj = jj + 1
+    		}
+  	}
+	//fp.close()
+}
+
+
+
+// stimcells(number of targets, first target cell, mean amplitude, variance, duration)
+// tonic stimulation to cells to give spontaneous firing
+proc stimcells() {local i, gid, r localobj stim, rs
+  	for i=0, cells.count-1 {
+    		gid = gidvec.x[i]			// id of cell
+    		if (gid >= $2 && gid < $1+$2) {		// appropriate target cell
+      			rs = ranlist.object(i)  	// the RandomStream that corresponds to
+                            				//   cells.object(i)
+      			rs.start()
+      			r = rs.r.normal($3, $4)  // return stimulation current
+      			cells.object(i).soma stim = new IClamp(0.5)
+      			stim.del = 0
+      			stim.dur = $5
+      			stim.amp = r
+      			stimlist.append(stim)
+    		}
+  	}
+}
+
+
+
+//mknet()  // go ahead and create the net!
+mknet(FDGCONN, 1)  // go ahead and create the net!
+
+print" DONE "
+
+
+

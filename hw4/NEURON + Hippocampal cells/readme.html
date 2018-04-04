@@ -1,0 +1,89 @@
+<html><pre>
+A COMPUTATIONAL STUDY ON HOW THETA MODULATED INHIBITION CAN ACCOUNT
+FOR THE LONG TEMPORAL WINDOWS IN THE ENTORHINAL-HIPPOCAMPAL LOOP
+---------------------------------------------------------------------
+The NEURON code implements a DG-CA3-CA1 network model (100 DG GCs, 2
+DG MCs, 2 DG BCs, 1 HC, 100 CA3 PCs, 2 CA3 BCs, 1 CA3 AAC, 1 CA3 OLM
+cell, 100 CA1 PCs, 1 CA1 AAC, 2 CA1 BCs, and 1 CA1 BSC) on how theta
+modulated inhibition accounts for the long temporal windows in the
+entorhinal-hippocampal loop.
+
+Reference:
+
+Cutsuridis V*, Poirazi P. (2015). A computational study on how theta
+modulated inhibition can account for the long temporal delays in the
+entorhinal-hippocampal loop. Neurobiology of Learning and Memory, 120:
+69-83.
+
+Abstract:
+
+A recent experimental study (Mizuseki, Sirota, Pastalkova, & Buzsaki,
+2009) has shown that the temporal delays between population activities
+in successive entorhinal and hippocampal anatomical stages are longer
+(about 70-80 ms) than expected from axon conduction velocities and
+passive synaptic integration of feed-forward excitatory inputs. We
+investigate via computer simulations the mechanisms that give rise to
+such long temporal delays in the hippocampus structures. A model of
+the dentate gyrus (DG), CA3 and CA1 microcircuits is presented that
+uses biophysical representations of the major cell types including
+granule cells, CA3 and CA1 pyramidal cells (PCs) and six types of
+interneurons: basket cells (BCs), axo-axonic cells (AACs),
+bistratified cells (BSCs), oriens lacunosum-moleculare cells (OLMs),
+mossy cells (MCs) and hilar perforant path associated cells
+(HC). Inputs to the network came from the entorhinal cortex (EC)
+(layers 2 and 3) and the medial septum (MS). The model simulates
+accurately the timing of firing of different hippocampal cells with
+respect to the theta rhythm. The model shows that the experimentally
+reported long temporal delays in the DG, CA3 and CA1 hippocampal
+regions are due to theta modulated somatic and axonic inhibition. The
+model further predicts that the phase at which the CA1 PCs fire with
+respect to the theta rhythm is determined primarily by their increased
+dendritic excitability caused by the decrease of the axial resistance
+and the A-type K+ conductance along their dendritic trunk.  The model
+predicted latencies by which the DG, CA3 and CA1 principal cells fire
+are inline with the experimental evidence. Finally, the model proposes
+functional roles for the different inhibitory interneurons in the
+retrieval of the memory pattern by the DG, CA3 and CA1 networks. The
+model makes a number of predictions, which can be tested
+experimentally, thus leading to a better understanding of the
+biophysical computations in the hippocampus.
+
+Main file: mosinit.hoc 
+
+This file is configured to produce the results presented in figures
+5-9 of the paper, showing the temporal relationships of voltage traces
+of the network's cells when the network is stimulated by EC-L2, EC-L3
+and medial septum (MS) inputs. Example results are in the Results
+directory, in which there are also Matlab files for plotting figure
+11, an example pattern recall when the EC-L2 input to DG-GCs is cueing
+the pattern, EC-L2 and EC-L3 inputs are present to drive the
+inhibitory interneurons, but they are disconnected from the CA3-PCs
+and CA1-PCs, respectively, so that recall is purely due to the EC-L2
+input cue.
+
+Usage:
+
+First compile the mod files (nrnivmodl on unix/linux, mknrndll on
+mswin or mac os x).  Then start with the command "nrngui mosinit.hoc"
+(unix/linux), or by double clicking the mosinit.hoc (mswin), or
+dragging and dropping mosinit.hoc onto the nrngui icon (mac os x).
+
+After the simulation starts it takes about a minute to setup the
+network, then you can run the default simulation (takes just under 20
+minutes) or explore the model with the nrngui.
+
+When running the model, hide the graphs for faster run times.  An
+example graph generated:
+
+<img src="./screenshot.png" alt="screenshot" width="550">
+
+is similar to Fig7D.
+
+20150524 Update from Ted Carnevale: Changed integration method from
+euler to derivimplicit which is appropriate for simple ion
+accumulation mechanisms.  See Integration methods for SOLVE statements
+http://www.neuron.yale.edu/phpBB/viewtopic.php?f=28&t=592
+
+20150525 Update from Ted Carnevale: Fixed ca initialization by
+inserting cai = ca into INITIAL block in cad.mod
+</pre></html>

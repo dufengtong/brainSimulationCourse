@@ -1,0 +1,41 @@
+load_file("nrngui.hoc")
+load_file("CA1PC.hoc")
+
+Vrest = -65
+dt = 0.01 
+celsius = 22
+tstop = 1200
+
+objref ca1pc_neuron[1], stim[1]
+
+ca1pc_neuron[0] = new CA1PyramidalCell()
+
+ca1pc_neuron[0].soma{
+	stim[0] = new IClamp(0.5)
+	stim[0].del = 100
+	stim[0].dur = 1000
+	stim[0].amp = 7
+}
+
+objref b1, g1
+
+b1 = new VBox()
+b1.intercept(1)
+
+g1 = new Graph()
+g1.size(0, tstop, -70, 40)
+g1.xaxis(1)
+g1.addvar("ca1pc_neuron[0].soma.v(0.5)", 1,1,0.7,0.96,2)
+g1.exec_menu("%10 Zoom out")
+
+xpanel("",1)
+xbutton("run()")
+xpanel()
+b1.intercept(0)
+b1.map()
+
+proc advance() {
+	fadvance()
+	g1.plot(t)
+	g1.flush()
+}

@@ -2,6 +2,10 @@
 *.png
 *.jpg
 
+# compiled files
+*.o
+*.c
+
 # docs
 *.docx
 *.dox

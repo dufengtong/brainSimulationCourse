@@ -1,0 +1,21 @@
+load_file("nrngui.hoc")
+
+load_file("GC.hoc")
+load_file("MC.hoc")
+load_file("BasketCell.hoc")
+load_file("HC.hoc")
+load_file("CA3PC.hoc")
+load_file("CA3BC.hoc")
+load_file("CA3AAC.hoc")
+load_file("CA3OLM.hoc")
+load_file("CA1PC.hoc")
+load_file("CA1AAC.hoc")
+load_file("CA1BC.hoc")
+load_file("CA1BSC.hoc")
+load_file("CA1OLM.hoc")
+load_file("stim_cell.hoc")	
+load_file("burst_cell.hoc")	// SEP input
+load_file("ranstream.hoc") 	// to give each cell its own sequence generator
+load_file("network.hoc")
+load_file("rig.hoc")
+load_file("gui.ses")

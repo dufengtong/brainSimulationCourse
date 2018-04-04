@@ -1,0 +1,288 @@
+begintemplate GranuleCell
+
+ndend1=4
+ndend2=4
+public  pre_list, connect2target, subsets, is_art, is_connected
+public  vbc2gc, vmc2gc, vhc2gc, vgc2bc, vbc2bc, vmc2bc, vhc2bc, vgc2mc, vbc2mc, vmc2mc, vhc2mc, vgc2hc, vmc2hc
+public soma, gcdend1, gcdend2
+public all, gcldend, pdend, mdend, ddend
+
+nst=10
+objectvar stim[nst]
+double stimdur[nst], stimdel[nst], stimamp[nst]
+public stim, stimdur, stimamp, stimdel
+create soma, gcdend1[ndend1], gcdend2[ndend2]
+objref pre_list
+
+
+proc init() {
+	pre_list = new List()
+	subsets()
+	gctemp()
+	synapse()
+}
+objref all, gcldend, pdend, mdend, ddend
+proc subsets(){ local i
+	objref all, gcldend, pdend, mdend, ddend
+	all = new SectionList()
+		soma all.append()
+		for i=0, 3 gcdend1 [i] all.append()
+		for i=0, 3 gcdend2 [i] all.append()
+
+	gcldend  = new SectionList()
+		gcdend1 [0] gcldend.append()
+		gcdend2 [0] gcldend.append()
+
+	pdend  = new SectionList()
+		gcdend1 [1] pdend.append()
+		gcdend2 [1] pdend.append()
+
+	mdend  = new SectionList()
+		gcdend1 [2] mdend.append()
+		gcdend2 [2] mdend.append()
+
+	ddend  = new SectionList()
+		gcdend1 [3] ddend.append()
+		gcdend2 [3] ddend.append()
+}
+proc gctemp() {
+
+	soma {nseg=1 L=16.8 diam=16.8} // changed L & diam
+		
+	gcdend1 [0] {nseg=1 L=50 diam=3}
+	for i = 1, 3	gcdend1 [i] {nseg=1 L=150 diam=3}
+
+	gcdend2 [0] {nseg=1 L=50 diam=3}
+	for i = 1, 3	gcdend2 [i] {nseg=1 L=150 diam=3}	 	
+
+    
+	forsec all {
+		insert ccanl
+		catau_ccanl = 10
+		caiinf_ccanl = 5.e-6
+		Ra=210
+	}
+
+	soma {
+                cm=1	
+
+		insert ichan2  //ildikos ichan
+		   gnatbar_ichan2=0.12  //original 0.030 to .055 
+		   gkfbar_ichan2=0.016  //original 0.015
+	           gksbar_ichan2=0.006
+	           gl_ichan2 = 0.00004
+	
+		insert borgka
+	           gkabar_borgka=0.012
+		
+		insert nca  // HAV-N- Ca channel
+	           gncabar_nca=0.002  // check to modify- original 0.004
+	
+	 	insert lca 
+	           glcabar_lca=0.005
+	
+		insert cat
+	           gcatbar_cat=0.000037
+	
+		insert gskch
+		   gskbar_gskch=0.001
+	
+		insert cagk
+		   gkbar_cagk=0.0006
+
+
+	} 
+
+	forsec gcldend {
+                cm=1
+
+		insert ichan2
+		   gnatbar_ichan2=0.018  //original 0.015
+		   gkfbar_ichan2=0.004
+		   gksbar_ichan2=0.006
+		   gl_ichan2 = 0.00004
+		insert nca  // HAV-N- Ca channel
+	           gncabar_nca=0.003  // check to modify- original 0.004
+		insert lca 
+		   glcabar_lca=0.0075
+		insert cat
+		   gcatbar_cat=0.000075
+		insert gskch
+		   gskbar_gskch=0.0004
+		insert cagk
+		   gkbar_cagk=0.0006
+	}
+		
+	forsec pdend {
+                cm=1.6
+
+		insert ichan2
+		   gnatbar_ichan2=0.013
+		   gkfbar_ichan2=0.004
+		   gksbar_ichan2=0.006
+		   gl_ichan2 = 0.000063
+		insert nca  // HAV-N- Ca channel
+		   gncabar_nca=0.001  // check to modify- original 0.004
+		insert lca 
+		   glcabar_lca=0.0075
+		insert cat
+		   gcatbar_cat=0.00025
+		insert gskch
+		   gskbar_gskch=0.0002
+		insert cagk
+		   gkbar_cagk=0.001
+	}
+		
+	 forsec mdend {
+                cm=1.6
+
+	 	insert ichan2
+		   gnatbar_ichan2=0.008
+		   gkfbar_ichan2=0.001
+		   gksbar_ichan2=0.006
+		   gl_ichan2 = 0.000063
+
+		insert nca  // HAV-N- Ca channel
+		   gncabar_nca=0.001  // check to modify- original 0.004
+		insert lca 
+		   glcabar_lca=0.0005
+		insert cat
+		   gcatbar_cat=0.0005
+		insert gskch
+		   gskbar_gskch=0.0
+		insert cagk
+		   gkbar_cagk=0.0024
+
+	}
+
+	forsec ddend {
+                cm=1.6
+
+		insert ichan2
+		   gnatbar_ichan2=0.0
+		   gkfbar_ichan2=0.001
+		   gksbar_ichan2=0.008
+		   gl_ichan2 = 0.000063
+
+		insert nca  // HAV-N- Ca channel
+		   gncabar_nca=0.001  // check to modify- original 0.004
+		insert lca 
+		   glcabar_lca=0.0
+		insert cat
+		   gcatbar_cat=0.001
+		insert gskch
+		   gskbar_gskch=0.0
+		insert cagk
+		   gkbar_cagk=0.0024
+
+	}
+		
+	forsec all {
+		enat = 45 
+		ekf = -90 
+		eks = -90  
+		ek=-90  
+		elca=130 
+		etca=130	 
+		esk=-90
+		el_ichan2 =-70
+		cao_ccanl=2 
+	}  // make catau slower70e-3 	cao=2 cai=50.e-6 
+
+		
+	connect gcdend1[0](0), soma(1)
+	connect gcdend2[0](0), soma(1)
+	for i=1,3 {
+		connect gcdend1[i](0), gcdend1[i-1](1)
+	}
+	for i=1,3 {
+		connect gcdend2[i](0), gcdend2[i-1](1)
+	}
+
+
+// current injection
+//for i=0,0 {
+//stimdel[i]=500
+//stimdur[i]=200
+//stimamp[i]=0.2
+
+//soma stim[i] = new IClamp(0.5)
+//stim.del[i]=stimdel[i]
+//stim.dur[i]=stimdur[i]
+//stim.amp[i]=stimamp[i]
+//}
+
+
+}
+	
+obfunc connect2target() { localobj nc //$o1 target point process, optional $o2 returned NetCon
+  	soma nc = new NetCon(&v(1), $o1)
+  	nc.threshold = -10
+  	if (numarg() == 2) { $o2 = nc } // for backward compatibility
+  	return nc
+}
+
+objref syn_
+proc synapse() {
+	gcdend1[3] syn_ = new Exp2Syn(0.5) // PP syn_ based on Greg and Staley
+	syn_.tau1 = 1.5	
+	syn_.tau2 = 5.5	
+	syn_.e = 0
+	pre_list.append(syn_)
+
+	gcdend2[3] syn_ = new Exp2Syn(0.5) // PPsyn based on Greg and Staley
+	syn_.tau1 = 1.5	
+	syn_.tau2 = 5.5	
+	syn_.e = 0
+	pre_list.append(syn_)
+
+	gcdend1[1] syn_ = new Exp2Syn(0.5) // MC syn_ *** Estimated
+	syn_.tau1 = 1.5	
+	syn_.tau2 = 5.5	
+	syn_.e = 0
+	pre_list.append(syn_)
+
+	gcdend2[1] syn_ = new Exp2Syn(0.5) // MC syn_   *** Estimated
+	syn_.tau1 = 1.5	
+	syn_.tau2 = 5.5	
+	syn_.e = 0
+	pre_list.append(syn_)
+
+	gcdend1[2] syn_ = new Exp2Syn(0.5) // HIPP  syn_ based on Harney and Jones corrected for temp
+	syn_.tau1 = 0.5	
+	syn_.tau2 = 6	
+	syn_.e = -70
+	pre_list.append(syn_)
+
+	gcdend2[2] syn_ = new Exp2Syn(0.5) // HIPP syn_ based on Harney and Jones corrected for temp
+	syn_.tau1 = 0.5	
+	syn_.tau2 = 6	
+	syn_.e = -70
+	pre_list.append(syn_)
+
+	soma syn_ = new Exp2Syn(0.5) // BC  syn_ based on Bartos
+	syn_.tau1 = 0.26	
+	syn_.tau2 = 5.5	
+	syn_.e = -70
+	pre_list.append(syn_)
+
+	gcdend1[1] syn_ = new Exp2Syn(0.5) // Sprouted Syn*************
+	syn_.tau1 = 1.5	
+	syn_.tau2 = 5.5	
+	syn_.e = 0
+	pre_list.append(syn_)
+
+	gcdend2[1] syn_ = new Exp2Syn(0.5) // Sprouted Syn*********
+	syn_.tau1 = 1.5	
+	syn_.tau2 = 5.5	
+	syn_.e = 0
+	pre_list.append(syn_)
+
+
+
+// Total of 11 synapses per GC 0,1 PP; 		2,3 MC;		4,5 HIPP;  	6 BC;		7,8 Sprout 
+}
+
+func is_art() { return 0 }
+
+endtemplate GranuleCell

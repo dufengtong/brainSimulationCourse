@@ -1,0 +1,557 @@
+//execute1("celltypes.element(\"Cell\")")
+
+begintemplate CA3PyramidalCell
+
+public init, topol, basic_shape, subsets, geom, biophys, geom_nseg, biophys_inhomo
+public pre_list, x, y, z, position, connect2target
+public is_art
+
+public L4_dend, L3_dend, L2_dend, L1_dend, soma, L6_dend, L7_obl_dend
+public L7_dend, L8_dend, L9_obl_dend, L9_dend, L10_dend, L11_dend
+public all, SDlevel5, SDlevel6, SDlevel7, SDlevel8, SDlevel9, SDlevel10
+public SDlevel11, SDlevel1, SDlevel2, SDlevel3, SDlevel4, SDlevel7obl, SDlevel9obl
+
+nst=10
+objectvar stim[nst]
+double stimdur[nst], stimdel[nst], stimamp[nst]
+
+FARADAY=96520
+PI=3.14159
+secondorder=2
+dt=0.025
+Tstop = 1000
+celsius=30
+
+objref pre_list
+
+proc init() {
+  pre_list = new List()
+  topol()
+  subsets()
+  geom()
+  biophys()
+  geom_nseg()
+  synapses()
+//  x = y = z = 0 // only change via position
+}
+
+create L4_dend[2], L3_dend[4], L2_dend[8], L1_dend[16], soma, L6_dend[2], L7_obl_dend[2]
+create L7_dend[2], L8_dend[4], L9_obl_dend[4], L9_dend[4], L10_dend[8], L11_dend[8]
+
+proc topol() { local i
+  connect L4_dend[1](0), L4_dend(0)
+  for i = 0, 1 connect L3_dend[i](0), L4_dend(0)
+  for i = 2, 3 connect L3_dend[i](0), L4_dend(1)
+  for i = 0, 1 connect L2_dend[i](0), L3_dend(1)
+  for i = 2, 3 connect L2_dend[i](0), L3_dend[1](1)
+  for i = 4, 5 connect L2_dend[i](0), L3_dend[3](1)
+  for i = 6, 7 connect L2_dend[i](0), L3_dend[2](1)
+  for i = 0, 1 connect L1_dend[i](0), L2_dend[1](1)
+  for i = 2, 3 connect L1_dend[i](0), L2_dend(1)
+  for i = 4, 5 connect L1_dend[i](0), L2_dend[2](1)
+  for i = 6, 7 connect L1_dend[i](0), L2_dend[3](1)
+  for i = 8, 9 connect L1_dend[i](0), L2_dend[4](1)
+  for i = 10, 11 connect L1_dend[i](0), L2_dend[5](1)
+  for i = 12, 13 connect L1_dend[i](0), L2_dend[i-6](1)
+  for i = 14, 15 connect L1_dend[i](0), L2_dend[i-8](1)
+  connect soma(0), L4_dend(1)
+  for i = 0, 1 connect L6_dend[i](0), soma(1)
+  for i = 0, 1 connect L7_obl_dend[i](0), L6_dend[i](1)
+  for i = 0, 1 connect L7_dend[i](0), L6_dend[i](1)
+  for i = 0, 1 connect L8_dend[i](0), L7_dend(1)
+  for i = 2, 3 connect L8_dend[i](0), L7_dend[1](1)
+  for i = 0, 3 connect L9_obl_dend[i](0), L8_dend[i](1)
+  for i = 0, 3 connect L9_dend[i](0), L8_dend[i](1)
+  for i = 0, 1 connect L10_dend[i](0), L9_dend(1)
+  for i = 2, 3 connect L10_dend[i](0), L9_dend[1](1)
+  for i = 4, 5 connect L10_dend[i](0), L9_dend[2](1)
+  for i = 6, 7 connect L10_dend[i](0), L9_dend[3](1)
+  connect L11_dend(0), L10_dend[1](1)
+  connect L11_dend[1](0), L10_dend(1)
+  for i = 2, 7 connect L11_dend[i](0), L10_dend[i](1)
+//  basic_shape()
+}
+/*proc basic_shape() {
+  L4_dend {pt3dclear() pt3dadd(-29, -14, 0, 1) pt3dadd(-14, -14, 0, 1)}
+  L3_dend {pt3dclear() pt3dadd(-29, -14, 0, 1) pt3dadd(-44, -44, 0, 1)}
+  L3_dend[1] {pt3dclear() pt3dadd(-29, -14, 0, 1) pt3dadd(-29, -44, 0, 1)}
+  L3_dend[2] {pt3dclear() pt3dadd(-14, -14, 0, 1) pt3dadd(15, -59, 0, 1)}
+  L3_dend[3] {pt3dclear() pt3dadd(-14, -14, 0, 1) pt3dadd(-14, -44, 0, 1)}
+  L2_dend {pt3dclear() pt3dadd(-44, -44, 0, 1) pt3dadd(-74, -74, 0, 1)}
+  L2_dend[1] {pt3dclear() pt3dadd(-44, -44, 0, 1) pt3dadd(-74, -59, 0, 1)}
+  L1_dend {pt3dclear() pt3dadd(-74, -59, 0, 1) pt3dadd(-104, -59, 0, 1)}
+  L1_dend[1] {pt3dclear() pt3dadd(-74, -59, 0, 1) pt3dadd(-104, -74, 0, 1)}
+  L1_dend[2] {pt3dclear() pt3dadd(-74, -74, 0, 1) pt3dadd(-104, -89, 0, 1)}
+  L1_dend[3] {pt3dclear() pt3dadd(-74, -74, 0, 1) pt3dadd(-89, -104, 0, 1)}
+  L2_dend[2] {pt3dclear() pt3dadd(-29, -44, 0, 1) pt3dadd(-44, -74, 0, 1)}
+  L2_dend[3] {pt3dclear() pt3dadd(-29, -44, 0, 1) pt3dadd(-29, -74, 0, 1)}
+  L1_dend[4] {pt3dclear() pt3dadd(-44, -74, 0, 1) pt3dadd(-74, -89, 0, 1)}
+  L1_dend[5] {pt3dclear() pt3dadd(-44, -74, 0, 1) pt3dadd(-59, -104, 0, 1)}
+  L1_dend[6] {pt3dclear() pt3dadd(-29, -74, 0, 1) pt3dadd(-44, -104, 0, 1)}
+  L2_dend[4] {pt3dclear() pt3dadd(-14, -44, 0, 1) pt3dadd(0, -74, 0, 1)}
+  L2_dend[5] {pt3dclear() pt3dadd(-14, -44, 0, 1) pt3dadd(-14, -74, 0, 1)}
+  L1_dend[7] {pt3dclear() pt3dadd(-29, -74, 0, 1) pt3dadd(-29, -104, 0, 1)}
+  L1_dend[8] {pt3dclear() pt3dadd(0, -74, 0, 1) pt3dadd(15, -89, 0, 1)}
+  L1_dend[9] {pt3dclear() pt3dadd(0, -74, 0, 1) pt3dadd(30, -89, 0, 1)}
+  L1_dend[10] {pt3dclear() pt3dadd(-14, -74, 0, 1) pt3dadd(0, -104, 0, 1)}
+  L1_dend[11] {pt3dclear() pt3dadd(-14, -74, 0, 1) pt3dadd(-14, -104, 0, 1)}
+  L2_dend[6] {pt3dclear() pt3dadd(15, -59, 0, 1) pt3dadd(30, -74, 0, 1)}
+  L2_dend[7] {pt3dclear() pt3dadd(15, -59, 0, 1) pt3dadd(45, -59, 0, 1)}
+  L1_dend[12] {pt3dclear() pt3dadd(30, -74, 0, 1) pt3dadd(45, -89, 0, 1)}
+  L1_dend[13] {pt3dclear() pt3dadd(45, -59, 0, 1) pt3dadd(60, -74, 0, 1)}
+  L1_dend[14] {pt3dclear() pt3dadd(30, -74, 0, 1) pt3dadd(63, -89, 0, 1)}
+  L1_dend[15] {pt3dclear() pt3dadd(45, -59, 0, 1) pt3dadd(75, -74, 0, 1)}
+  soma {pt3dclear() pt3dadd(-14, -14, 0, 1) pt3dadd(-14, 15, 0, 1)}
+  L6_dend {pt3dclear() pt3dadd(-14, 15, 0, 1) pt3dadd(-29, 30, 0, 1)}
+  L6_dend[1] {pt3dclear() pt3dadd(-14, 15, 0, 1) pt3dadd(0, 30, 0, 1)}
+  L7_obl_dend {pt3dclear() pt3dadd(-29, 30, 0, 1) pt3dadd(-59, 45, 0, 1)}
+  L7_dend {pt3dclear() pt3dadd(-29, 30, 0, 1) pt3dadd(-44, 45, 0, 1)}
+  L7_dend[1] {pt3dclear() pt3dadd(0, 30, 0, 1) pt3dadd(30, 60, 0, 1)}
+  L7_obl_dend[1] {pt3dclear() pt3dadd(0, 30, 0, 1) pt3dadd(30, 45, 0, 1)}
+  L8_dend {pt3dclear() pt3dadd(-44, 45, 0, 1) pt3dadd(-74, 60, 0, 1)}
+  L8_dend[1] {pt3dclear() pt3dadd(-44, 45, 0, 1) pt3dadd(-29, 75, 0, 1)}
+  L9_obl_dend {pt3dclear() pt3dadd(-74, 60, 0, 1) pt3dadd(-89, 75, 0, 1)}
+  L9_dend {pt3dclear() pt3dadd(-74, 60, 0, 1) pt3dadd(-74, 90, 0, 1)}
+  L10_dend {pt3dclear() pt3dadd(-74, 90, 0, 1) pt3dadd(-59, 120, 0, 1)}
+  L10_dend[1] {pt3dclear() pt3dadd(-74, 90, 0, 1) pt3dadd(-89, 120, 0, 1)}
+  L11_dend {pt3dclear() pt3dadd(-89, 120, 0, 1) pt3dadd(-89, 150, 0, 1)}
+  L11_dend[1] {pt3dclear() pt3dadd(-59, 120, 0, 1) pt3dadd(-59, 150, 0, 1)}
+  L9_dend[1] {pt3dclear() pt3dadd(-29, 75, 0, 1) pt3dadd(-29, 105, 0, 1)}
+  L9_obl_dend[1] {pt3dclear() pt3dadd(-29, 75, 0, 1) pt3dadd(-14, 90, 0, 1)}
+  L10_dend[2] {pt3dclear() pt3dadd(-29, 105, 0, 1) pt3dadd(-44, 120, 0, 1)}
+  L10_dend[3] {pt3dclear() pt3dadd(-29, 105, 0, 1) pt3dadd(-14, 120, 0, 1)}
+  L11_dend[2] {pt3dclear() pt3dadd(-44, 120, 0, 1) pt3dadd(-44, 150, 0, 1)}
+  L11_dend[3] {pt3dclear() pt3dadd(-14, 120, 0, 1) pt3dadd(-14, 150, 0, 1)}
+  L8_dend[2] {pt3dclear() pt3dadd(30, 60, 0, 1) pt3dadd(15, 75, 0, 1)}
+  L8_dend[3] {pt3dclear() pt3dadd(30, 60, 0, 1) pt3dadd(45, 75, 0, 1)}
+  L9_dend[2] {pt3dclear() pt3dadd(15, 75, 0, 1) pt3dadd(15, 105, 0, 1)}
+  L9_obl_dend[2] {pt3dclear() pt3dadd(15, 75, 0, 1) pt3dadd(0, 90, 0, 1)}
+  L10_dend[4] {pt3dclear() pt3dadd(15, 105, 0, 1) pt3dadd(0, 120, 0, 1)}
+  L10_dend[5] {pt3dclear() pt3dadd(15, 105, 0, 1) pt3dadd(30, 135, 0, 1)}
+  L11_dend[4] {pt3dclear() pt3dadd(0, 120, 0, 1) pt3dadd(0, 150, 0, 1)}
+  L11_dend[5] {pt3dclear() pt3dadd(30, 135, 0, 1) pt3dadd(30, 165, 0, 1)}
+  L9_dend[3] {pt3dclear() pt3dadd(45, 75, 0, 1) pt3dadd(45, 105, 0, 1)}
+  L9_obl_dend[3] {pt3dclear() pt3dadd(45, 75, 0, 1) pt3dadd(60, 90, 0, 1)}
+  L10_dend[6] {pt3dclear() pt3dadd(45, 105, 0, 1) pt3dadd(30, 120, 0, 1)}
+  L11_dend[6] {pt3dclear() pt3dadd(30, 120, 0, 1) pt3dadd(45, 150, 0, 1)}
+  L10_dend[7] {pt3dclear() pt3dadd(45, 105, 0, 1) pt3dadd(60, 120, 0, 1)}
+  L11_dend[7] {pt3dclear() pt3dadd(60, 120, 0, 1) pt3dadd(60, 150, 0, 1)}
+  L4_dend[1] {pt3dclear() pt3dadd(-29, -14, 0, 1) pt3dadd(-179, -14, 0, 1)}
+}*/
+
+objref all, SDlevel5, SDlevel6, SDlevel7, SDlevel8, SDlevel9, SDlevel10
+objref SDlevel11, SDlevel1, SDlevel2, SDlevel3, SDlevel4, SDlevel7obl, SDlevel9obl
+proc subsets() { local i
+  objref all, SDlevel5, SDlevel6, SDlevel7, SDlevel8, SDlevel9, SDlevel10
+  objref SDlevel11, SDlevel1, SDlevel2, SDlevel3, SDlevel4, SDlevel7obl, SDlevel9obl
+  
+  all = new SectionList()
+
+  SDlevel1 = new SectionList()
+    for i=0, 15 L1_dend[i] SDlevel1.append()
+
+  SDlevel2 = new SectionList()
+    for i=0, 7 L2_dend[i] SDlevel2.append()
+
+  SDlevel3 = new SectionList()
+    for i=0, 3 L3_dend[i] SDlevel3.append()
+
+  SDlevel4 = new SectionList()
+    for i=0, 1 L4_dend[i] SDlevel4.append()
+
+  SDlevel5 = new SectionList()
+    soma SDlevel5.append()
+
+  SDlevel6 = new SectionList()
+    for i=0, 1 L6_dend[i] SDlevel6.append()
+
+  SDlevel7 = new SectionList()
+    for i=0, 1 L7_dend[i] SDlevel7.append()
+
+  SDlevel7obl = new SectionList()
+    for i=0, 1 L7_obl_dend[i] SDlevel7obl.append()
+
+  SDlevel8 = new SectionList()
+    for i=0, 3 L8_dend[i] SDlevel8.append()
+
+  SDlevel9 = new SectionList()
+    for i=0, 3 L9_dend[i] SDlevel9.append()
+
+  SDlevel9obl = new SectionList()
+    for i=0, 3 L9_obl_dend[i] SDlevel9obl.append()  
+
+  SDlevel10 = new SectionList()
+    for i=0, 7 L10_dend[i] SDlevel10.append()
+
+  SDlevel11 = new SectionList()
+    for i=0, 7 L11_dend[i] SDlevel11.append()
+
+}
+
+proc geom() {
+  forsec SDlevel1 {  L = 70  diam = 2  }
+  forsec SDlevel2 {  L = 40  diam = 3.14  }
+  forsec SDlevel3 {  L = 15  diam = 5  }
+  forsec SDlevel4 {  L = 25.5  diam = 30  }
+  forsec SDlevel5 {  L = 50  diam = 10  }
+  forsec SDlevel6 {  L = 50  diam = 6.3  }
+  forsec SDlevel7 {  L = 50  diam = 5  }
+  forsec SDlevel7obl {  L = 70  diam = 2.78  }
+  forsec SDlevel8 {  L = 60  diam = 3.14  }
+  forsec SDlevel9 {  L = 60  diam = 2.5  }
+  forsec SDlevel9obl {  L = 50  diam = 1.4  }
+  forsec SDlevel10 {  L = 60  diam = 1.6  }
+  forsec SDlevel11 {  L = 60  diam = 1.6  }
+}
+
+freq = 100      // Hz, frequency at which AC length constant will be computed
+d_lambda = 0.1
+
+func lambda_f() { local i, x1, x2, d1, d2, lam
+        if (n3d() < 2) {
+                return 1e5*sqrt(diam/(4*PI*$1*Ra*cm))
+        }
+// above was too inaccurate with large variation in 3d diameter
+// so now we use all 3-d points to get a better approximate lambda
+        x1 = arc3d(0)
+        d1 = diam3d(0)
+        lam = 0
+        for i=1, n3d()-1 {
+                x2 = arc3d(i)
+                d2 = diam3d(i)
+                lam += (x2 - x1)/sqrt(d1 + d2)
+                x1 = x2   d1 = d2
+        }
+        //  length of the section in units of lambda
+        lam *= sqrt(2) * 1e-5*sqrt(4*PI*$1*Ra*cm)
+
+        return L/lam
+}
+
+proc geom_nseg() {
+  	forsec all { nseg = int((L/(0.1*lambda_f(100))+.9)/2)*2 + 1  }
+}
+
+proc biophys() {
+        forall {
+                insert pas e_pas=-65 g_pas=1/60000 Ra=200
+                insert cadifus
+                insert cal1  gcalbar_cal1=0.0025
+                insert can2  gcanbar_can2=0.0025
+                insert cat3  gcatbar_cat3=0.00025
+                insert kahp gkahpbar_kahp=0.0004
+                insert cagk3 gkbar_cagk3=0.00055
+        }
+        
+        forall {
+	        cao=2
+	        cai=50.e-6
+	        ek=-91
+	        v=-65
+	        if (ismembrane("nahh")) {ena=50}
+	}
+
+        for i=0,15 L1_dend[i] {
+                insert nahh    gnabar_nahh=0.015		// 0.015: regular spiking; 0.015: bursting (Migliore et al. (1995))
+                insert borgkdr gkdrbar_borgkdr=0.009		// 0.03: regular spiking; 0.009: bursting (Migliore et al. (1995))
+                insert borgka  gkabar_borgka=0.0001		// 0.001: regular spiking; 0.0001: bursting (Migliore et al. (1995))
+                insert borgkm  gkmbar_borgkm=0.00002		// 0.0001: regular spiking; 0.00002: bursting (Migliore et al. (1995))
+        }
+        for i=0,7 L2_dend[i] {
+                insert nahh    gnabar_nahh=0.015		// 0.015: regular spiking; 0.015: bursting (Migliore et al. (1995))
+                insert borgkdr gkdrbar_borgkdr=0.009		// 0.03: regular spiking; 0.009: bursting (Migliore et al. (1995))
+                insert borgka  gkabar_borgka=0.0001		// 0.001: regular spiking; 0.0001: bursting (Migliore et al. (1995))
+                insert borgkm  gkmbar_borgkm=0.00002		// 0.0001: regular spiking; 0.00002: bursting (Migliore et al. (1995))
+        }
+        for i=0,3 L3_dend[i] {
+                insert nahh    gnabar_nahh=0.015		// 0.015: regular spiking; 0.015: bursting (Migliore et al. (1995))
+                insert borgkdr gkdrbar_borgkdr=0.009		// 0.03: regular spiking; 0.009: bursting (Migliore et al. (1995))
+                insert borgka  gkabar_borgka=0.0001		// 0.001: regular spiking; 0.0001: bursting (Migliore et al. (1995))
+                insert borgkm  gkmbar_borgkm=0.00002		// 0.0001: regular spiking; 0.00002: bursting (Migliore et al. (1995))
+        }
+        L4_dend[0] {
+                insert nahh    gnabar_nahh=0.015		// 0.015: regular spiking; 0.015: bursting (Migliore et al. (1995))
+                insert borgkdr gkdrbar_borgkdr=0.009		// 0.03: regular spiking; 0.009: bursting (Migliore et al. (1995))
+                insert borgka  gkabar_borgka=0.0001		// 0.001: regular spiking; 0.0001: bursting (Migliore et al. (1995))
+                insert borgkm  gkmbar_borgkm=0.00002		// 0.0001: regular spiking; 0.00002: bursting (Migliore et al. (1995))
+        }
+                
+        soma {
+                insert nahh    gnabar_nahh=0.015		// 0.015: regular spiking; 0.015: bursting (Migliore et al. (1995))
+                insert borgkdr gkdrbar_borgkdr=0.009		// 0.03: regular spiking; 0.009: bursting (Migliore et al. (1995))
+                insert borgka  gkabar_borgka=0.0001		// 0.001: regular spiking; 0.0001: bursting (Migliore et al. (1995))
+                insert borgkm  gkmbar_borgkm=0.00002		// 0.0001: regular spiking; 0.00002: bursting (Migliore et al. (1995))
+        }
+                
+        for i=0,1 L6_dend[i] {
+                insert nahh    gnabar_nahh=0.015		// 0.015: regular spiking; 0.015: bursting (Migliore et al. (1995))
+                insert borgkdr gkdrbar_borgkdr=0.009		// 0.03: regular spiking; 0.009: bursting (Migliore et al. (1995))
+                insert borgka  gkabar_borgka=0.0001		// 0.001: regular spiking; 0.0001: bursting (Migliore et al. (1995))
+                insert borgkm  gkmbar_borgkm=0.00002		// 0.0001: regular spiking; 0.00002: bursting (Migliore et al. (1995))
+        }
+        for i=0,1 L7_dend[i] {
+                insert nahh    gnabar_nahh=0.015		// 0.015: regular spiking; 0.015: bursting (Migliore et al. (1995))
+                insert borgkdr gkdrbar_borgkdr=0.009		// 0.03: regular spiking; 0.009: bursting (Migliore et al. (1995))
+                insert borgka  gkabar_borgka=0.0001		// 0.001: regular spiking; 0.0001: bursting (Migliore et al. (1995))
+                insert borgkm  gkmbar_borgkm=0.00002		// 0.0001: regular spiking; 0.00002: bursting (Migliore et al. (1995))
+        }        
+        for i=0,1 L7_obl_dend[i] {
+                insert nahh    gnabar_nahh=0.015		// 0.015: regular spiking; 0.015: bursting (Migliore et al. (1995))
+                insert borgkdr gkdrbar_borgkdr=0.009		// 0.03: regular spiking; 0.009: bursting (Migliore et al. (1995))
+                insert borgka  gkabar_borgka=0.0001		// 0.001: regular spiking; 0.0001: bursting (Migliore et al. (1995))
+                insert borgkm  gkmbar_borgkm=0.00002		// 0.0001: regular spiking; 0.00002: bursting (Migliore et al. (1995))
+        }        
+        for i=0,3 L8_dend[i] {
+                insert nahh    gnabar_nahh=0.015		// 0.015: regular spiking; 0.015: bursting (Migliore et al. (1995))
+                insert borgkdr gkdrbar_borgkdr=0.009		// 0.03: regular spiking; 0.009: bursting (Migliore et al. (1995))
+                insert borgka  gkabar_borgka=0.0001		// 0.001: regular spiking; 0.0001: bursting (Migliore et al. (1995))
+                insert borgkm  gkmbar_borgkm=0.00002		// 0.0001: regular spiking; 0.00002: bursting (Migliore et al. (1995))
+        }        
+        for i=0,3 L9_dend[i] {
+                insert nahh    gnabar_nahh=0.015		// 0.015: regular spiking; 0.015: bursting (Migliore et al. (1995))
+                insert borgkdr gkdrbar_borgkdr=0.009		// 0.03: regular spiking; 0.009: bursting (Migliore et al. (1995))
+                insert borgka  gkabar_borgka=0.0001		// 0.001: regular spiking; 0.0001: bursting (Migliore et al. (1995))
+                insert borgkm  gkmbar_borgkm=0.00002		// 0.0001: regular spiking; 0.00002: bursting (Migliore et al. (1995))
+        }        
+        for i=0,3 L9_obl_dend[i] {
+                insert nahh    gnabar_nahh=0.015		// 0.015: regular spiking; 0.015: bursting (Migliore et al. (1995))
+                insert borgkdr gkdrbar_borgkdr=0.009		// 0.03: regular spiking; 0.009: bursting (Migliore et al. (1995))
+                insert borgka  gkabar_borgka=0.0001		// 0.001: regular spiking; 0.0001: bursting (Migliore et al. (1995))
+                insert borgkm  gkmbar_borgkm=0.00002		// 0.0001: regular spiking; 0.00002: bursting (Migliore et al. (1995))
+        }        
+        for i=0,7 L10_dend[i] {
+                insert nahh    gnabar_nahh=0.015		// 0.015: regular spiking; 0.015: bursting (Migliore et al. (1995))
+                insert borgkdr gkdrbar_borgkdr=0.009		// 0.03: regular spiking; 0.009: bursting (Migliore et al. (1995))
+                insert borgka  gkabar_borgka=0.0001		// 0.001: regular spiking; 0.0001: bursting (Migliore et al. (1995))
+                insert borgkm  gkmbar_borgkm=0.00002		// 0.0001: regular spiking; 0.00002: bursting (Migliore et al. (1995))
+        }        
+        for i=0,7 L11_dend[i] {
+                insert nahh    gnabar_nahh=0.015		// 0.015: regular spiking; 0.015: bursting (Migliore et al. (1995))
+                insert borgkdr gkdrbar_borgkdr=0.009		// 0.03: regular spiking; 0.009: bursting (Migliore et al. (1995))
+                insert borgka  gkabar_borgka=0.0001		// 0.001: regular spiking; 0.0001: bursting (Migliore et al. (1995))
+                insert borgkm  gkmbar_borgkm=0.00002		// 0.0001: regular spiking; 0.00002: bursting (Migliore et al. (1995))
+        }  
+        
+//	for i=0,0 {
+//		stimdel[i]=500
+//		stimdur[i]=200
+//		stimamp[i]=1
+
+		/* 0.4 stim when we want the cell to fire with regular spikes */
+
+//		L4_dend[0] stim[i] = new IClamp(0.5)
+//		stim[i].del=stimdel[i]
+//		stim[i].dur=stimdur[i]
+//		stim[i].amp=stimamp[i]
+//	}
+        
+}
+
+//proc biophys_inhomo(){}
+//proc position() { local i
+//  L4_dend for i = 0, n3d()-1 {
+//    pt3dchange(i, $1-x+x3d(i), $2-y+y3d(i), $3-z+z3d(i), diam3d(i))
+//  }
+//  x = $1  y = $2  z = $3
+//}
+
+obfunc connect2target() { localobj nc //$o1 target point process, optional $o2 returned NetCon
+  L4_dend nc = new NetCon(&v(1), $o1)
+  nc.threshold = -10
+  if (numarg() == 2) { $o2 = nc } // for backward compatibility
+  return nc
+}
+
+objref syn_
+proc synapses() {
+  	/* E0 */   	L11_dend syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// AMPA		EC input
+    	syn_.tau1 = 0.5
+    	syn_.tau2 = 3
+    	syn_.e = 0
+  	/* E1 */   	L11_dend[1] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// AMPA		EC input
+    	syn_.tau1 = 0.5
+    	syn_.tau2 = 3
+    	syn_.e = 0
+  	/* E2 */   	L11_dend[2] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// AMPA		EC input
+    	syn_.tau1 = 0.5
+    	syn_.tau2 = 3
+    	syn_.e = 0
+  	/* E3 */   	L11_dend[3] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// AMPA		EC input
+    	syn_.tau1 = 0.5
+    	syn_.tau2 = 3
+    	syn_.e = 0
+  	/* E4 */   	L11_dend[4] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// AMPA		EC input
+    	syn_.tau1 = 0.5
+    	syn_.tau2 = 3
+    	syn_.e = 0
+  	/* E5 */   	L11_dend[5] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// AMPA		EC input
+    	syn_.tau1 = 0.5
+    	syn_.tau2 = 3
+    	syn_.e = 0
+  	/* E6 */   	L11_dend[6] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// AMPA		EC input
+    	syn_.tau1 = 0.5
+    	syn_.tau2 = 3
+    	syn_.e = 0
+  	/* E7 */   	L11_dend[7] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// AMPA		EC input
+    	syn_.tau1 = 0.5
+    	syn_.tau2 = 3
+    	syn_.e = 0
+  	/* E8 */   	L7_dend syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// AMPA		DG input
+    	syn_.tau1 = 0.5
+    	syn_.tau2 = 3
+    	syn_.e = 0
+  	/* E9 */   	L7_dend[1] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// AMPA		DG input
+    	syn_.tau1 = 0.5
+    	syn_.tau2 = 3
+    	syn_.e = 0
+  	/* E10 */   	L7_obl_dend syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// AMPA		DG input
+    	syn_.tau1 = 0.5
+    	syn_.tau2 = 3
+    	syn_.e = 0
+  	/* E11 */   	L7_obl_dend[1] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// AMPA		DG input
+    	syn_.tau1 = 0.5
+    	syn_.tau2 = 3
+    	syn_.e = 0    	  	
+  	/* E12 */   	L7_dend syn_ = new NMDA(0.5)  pre_list.append(syn_)		// NMDA		DG input
+    	syn_.tcon = 2.3	
+    	syn_.tcoff = 100
+    	syn_.gNMDAmax = 1	// use connection weight to determine max cond
+  	/* E13 */   	L7_dend[1] syn_ = new NMDA(0.5)  pre_list.append(syn_)		// NMDA		DG input
+    	syn_.tcon = 2.3	
+    	syn_.tcoff = 100
+    	syn_.gNMDAmax = 1	// use connection weight to determine max cond
+  	/* E14 */   	L7_obl_dend syn_ = new NMDA(0.5)  pre_list.append(syn_)		// NMDA		DG input
+    	syn_.tcon = 2.3	
+    	syn_.tcoff = 100
+    	syn_.gNMDAmax = 1	// use connection weight to determine max cond
+  	/* E15 */   	L7_obl_dend[1] syn_ = new NMDA(0.5)  pre_list.append(syn_)	// NMDA		DG input
+    	syn_.tcon = 2.3	
+    	syn_.tcoff = 100
+    	syn_.gNMDAmax = 1	// use connection weight to determine max cond  	
+  	/* E16 */   	L8_dend syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// AMPA		PC recurrent input
+    	syn_.tau1 = 0.5
+    	syn_.tau2 = 3
+    	syn_.e = 0
+  	/* E17 */   	L8_dend[1] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// AMPA		PC recurrent input
+    	syn_.tau1 = 0.5
+    	syn_.tau2 = 3
+    	syn_.e = 0
+  	/* E18 */   	L8_dend[2] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// AMPA		PC recurrent input
+    	syn_.tau1 = 0.5
+    	syn_.tau2 = 3
+    	syn_.e = 0
+  	/* E19 */   	L8_dend[3] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// AMPA		PC recurrent input
+    	syn_.tau1 = 0.5
+    	syn_.tau2 = 3
+    	syn_.e = 0
+  	/* I20 */   	soma syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)		// GABA-A	B cell
+    	syn_.tau1 = 1
+    	syn_.tau2 = 8
+    	syn_.e = -75
+  	/* I21 */   	L4_dend[0] syn_ = new MyExp2Syn(0.1)  pre_list.append(syn_)		// GABA-A	AA cell
+    	syn_.tau1 = 1
+    	syn_.tau2 = 8
+    	syn_.e = -75    	
+  	/* I22 */	L10_dend syn_ = new MyExp2Syn(0.5) pre_list.append(syn_)	// GABA-A	OLM cells
+    	syn_.tau1 = 1
+    	syn_.tau2 = 8
+    	syn_.e = -75
+  	/* I23 */	L10_dend[1] syn_ = new MyExp2Syn(0.5) pre_list.append(syn_)	// GABA-A	OLM cells
+    	syn_.tau1 = 1
+    	syn_.tau2 = 8
+    	syn_.e = -75
+  	/* I24 */	L10_dend[2] syn_ = new MyExp2Syn(0.5) pre_list.append(syn_)	// GABA-A	OLM cells
+    	syn_.tau1 = 1
+    	syn_.tau2 = 8
+    	syn_.e = -75
+  	/* I25 */	L10_dend[3] syn_ = new MyExp2Syn(0.5) pre_list.append(syn_)	// GABA-A	OLM cells
+    	syn_.tau1 = 1
+    	syn_.tau2 = 8
+    	syn_.e = -75
+  	/* I26 */	L10_dend[4] syn_ = new MyExp2Syn(0.5) pre_list.append(syn_)	// GABA-A	OLM cells
+    	syn_.tau1 = 1
+    	syn_.tau2 = 8
+    	syn_.e = -75
+  	/* I27 */	L10_dend[5] syn_ = new MyExp2Syn(0.5) pre_list.append(syn_)	// GABA-A	OLM cells
+    	syn_.tau1 = 1
+    	syn_.tau2 = 8
+    	syn_.e = -75
+  	/* I28 */	L10_dend[6] syn_ = new MyExp2Syn(0.5) pre_list.append(syn_)	// GABA-A	OLM cells
+    	syn_.tau1 = 1
+    	syn_.tau2 = 8
+    	syn_.e = -75
+  	/* I29 */	L10_dend[7] syn_ = new MyExp2Syn(0.5) pre_list.append(syn_)	// GABA-A	OLM cells
+    	syn_.tau1 = 1
+    	syn_.tau2 = 8
+    	syn_.e = -75
+  	/* I30 */	L10_dend syn_ = new MyExp2Syn(0.5) pre_list.append(syn_)	// GABA-B	OLM cells
+    	syn_.tau1 = 35
+    	syn_.tau2 = 100
+    	syn_.e = -75
+  	/* I31 */	L10_dend[1] syn_ = new MyExp2Syn(0.5) pre_list.append(syn_)	// GABA-B	OLM cells
+    	syn_.tau1 = 35
+    	syn_.tau2 = 100
+    	syn_.e = -75
+  	/* I32 */	L10_dend[2] syn_ = new MyExp2Syn(0.5) pre_list.append(syn_)	// GABA-B	OLM cells
+    	syn_.tau1 = 35
+    	syn_.tau2 = 100
+    	syn_.e = -75
+  	/* I33 */	L10_dend[3] syn_ = new MyExp2Syn(0.5) pre_list.append(syn_)	// GABA-B	OLM cells
+    	syn_.tau1 = 35
+    	syn_.tau2 = 100
+    	syn_.e = -75
+  	/* I34 */	L10_dend[4] syn_ = new MyExp2Syn(0.5) pre_list.append(syn_)	// GABA-B	OLM cells
+    	syn_.tau1 = 35
+    	syn_.tau2 = 100
+    	syn_.e = -75
+  	/* I35 */	L10_dend[5] syn_ = new MyExp2Syn(0.5) pre_list.append(syn_)	// GABA-B	OLM cells
+    	syn_.tau1 = 35
+    	syn_.tau2 = 100
+    	syn_.e = -75
+  	/* I36 */	L10_dend[6] syn_ = new MyExp2Syn(0.5) pre_list.append(syn_)	// GABA-B	OLM cells
+    	syn_.tau1 = 35
+    	syn_.tau2 = 100
+    	syn_.e = -75
+  	/* I37 */	L10_dend[7] syn_ = new MyExp2Syn(0.5) pre_list.append(syn_)	// GABA-B	OLM cells
+    	syn_.tau1 = 35
+    	syn_.tau2 = 100
+    	syn_.e = -75   	
+  	/* I38 */   	L8_dend syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// GABA-A	BS cells
+    	syn_.tau1 = 1
+    	syn_.tau2 = 8
+    	syn_.e = -75
+  	/* I39 */   	L8_dend[1] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// GABA-A	BS cells
+    	syn_.tau1 = 1
+    	syn_.tau2 = 8
+    	syn_.e = -75
+  	/* I40 */   	L8_dend[2] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// GABA-A	BS cells
+    	syn_.tau1 = 1
+    	syn_.tau2 = 8
+    	syn_.e = -75
+  	/* I41 */   	L8_dend[3] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// GABA-A	BS cells
+    	syn_.tau1 = 1
+    	syn_.tau2 = 8
+    	syn_.e = -75
+  	/* I42 */   	L8_dend syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// GABA-B	BS cells
+    	syn_.tau1 = 35
+    	syn_.tau2 = 100
+    	syn_.e = -75
+  	/* I43 */   	L8_dend[1] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// GABA-B	BS cells
+    	syn_.tau1 = 35
+    	syn_.tau2 = 100
+    	syn_.e = -75
+  	/* I44 */   	L8_dend[2] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// GABA-B	BS cells
+    	syn_.tau1 = 35
+    	syn_.tau2 = 100
+    	syn_.e = -75
+  	/* I45 */   	L8_dend[3] syn_ = new MyExp2Syn(0.5)  pre_list.append(syn_)	// GABA-B	BS cells
+    	syn_.tau1 = 35
+    	syn_.tau2 = 100
+    	syn_.e = -75    	
+	
+}
+
+func is_art() { return 0 }
+
+endtemplate CA3PyramidalCell
+

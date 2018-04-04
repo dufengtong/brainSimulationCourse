@@ -1,0 +1,656 @@
+//////////////////////////////////////////////////
+// Instrumentation, i.e. stimulation and recording
+//////////////////////////////////////////////////
+
+
+// setup activity in EC stims
+proc mkEC() {local i, necs localobj cstim, rs
+  	EClist = new Vector()
+  	necs = 0
+  	print "Make EC input..."
+  	for i=0, cells.count-1 {
+    		gid = gidvec.x[i]	// id of cell
+    		if (gid >= iECL3180 && gid < iECL3180+nECL3180) {	// appropriate target cell
+        		// create cue stimulus
+        		cstim = cells.object(i).stim
+			//cstim.number = ECL3180NUM
+			//cstim.start = ECL3180START
+			//cstim.interval = ECL3180INT
+			//cstim.noise = ECL3180NOISE
+			//cstim.burstint = ECL3180BINT
+        		//cstim.burstlen = ECL3180BLEN
+			cstim.number = ECL3180NUM
+			cstim.start = ECL3180START
+			cstim.interval = ECL3180INT
+			cstim.noise = ECL3180NOISE
+		}
+    		if (gid >= iECL3360 && gid < iECL3360+nECL3360) {	// appropriate target cell
+        		// create cue stimulus
+        		cstim = cells.object(i).stim
+    			rs = ranlist.object(i)
+			//cstim.number = ECL3360NUM
+			//cstim.start = ECL3360START
+			//cstim.interval = ECL3360INT
+			//cstim.noise = ECL3360NOISE
+			//cstim.burstint = ECL3360BINT
+        		//cstim.burstlen = ECL3360BLEN
+			cstim.number = ECL3360NUM
+			cstim.start = ECL3360START
+			cstim.interval = ECL3360INT
+		        cstim.noise = ECL3360NOISE
+    		}
+    		if (gid >= iECL2180 && gid < iECL2180+nECL2180) {	// appropriate target cell
+        		// create cue stimulus
+        		cstim = cells.object(i).stim
+			//cstim.number = ECL2180NUM
+			//cstim.start = ECL2180START
+			//cstim.interval = ECL2180INT
+			//cstim.noise = ECL2180NOISE
+			//cstim.burstint = ECL2180BINT
+        		//cstim.burstlen = ECL2180BLEN
+			cstim.number = ECL2180NUM
+			cstim.start = ECL2180START
+			cstim.interval = ECL2180INT
+			cstim.noise = ECL2180NOISE
+		}
+    		if (gid >= iECL2360 && gid < iECL2360+nECL2360) {	// appropriate target cell
+        		// create cue stimulus
+        		cstim = cells.object(i).stim
+    			rs = ranlist.object(i)
+			//cstim.number = ECL2360NUM
+			//cstim.start = ECL2360START
+			//cstim.interval = ECL2360INT
+			//cstim.noise = ECL2360NOISE
+			//cstim.burstint = ECL2360BINT
+        		//cstim.burstlen = ECL2360BLEN
+			cstim.number = ECL2360NUM
+			cstim.start = ECL2360START
+			cstim.interval = ECL2360INT
+		        cstim.noise = ECL2360NOISE
+        		// Use the gid-specific random generator so random streams are
+        		// independent of where and how many stims there are.
+        		cstim.noiseFromRandom(rs.r)
+        		rs.r.normal(0, 1)
+        		rs.start()
+       			EClist.append(i)
+        		necs += 1
+		}
+  	}
+}
+
+
+objref cue, fp
+
+// setup activity pattern in input cue stims
+proc mkcueECL2180() {local i, j, ncue localobj cstim, target, rs
+  	print "Make cue (ECL2180) input..."
+  	cuelistECL2180 = new Vector()
+  	// open patterns file
+  	fp = new File($s1)
+  	fp.ropen()
+  	cue = new Vector(nECL2180)
+  	cue.scanf(fp, $2, $4)	// read pattern
+	//  cue.printf()
+  	fp.close()
+  	ncue = 0
+  	// find active cells in pattern
+  	for i=0, cue.size()-1 {
+    		//if (!pc.gid_exists(i+iECL2180)) { continue }
+    		if (ncue <= SPATT*$3) { 	// fraction of active cells in cue
+      			if (cue.x[i] == 1) {
+        			print "Cue cell ", i
+        			//cstim = pc.gid2cell(i+iECL2180)
+        			cstim = cells.object(i+iECL2180).stim
+        			for j=0, cells.count-1 {
+          				if (gidvec.x[j] == i+iECL2180) {break}	// find cell index
+        			}
+    				rs = ranlist.object(j)
+        			// create cue stimulus
+				//cstim.number = ECL2180NUM
+				//cstim.start = ECL2180START
+				//cstim.interval = ECL2180INT
+				//cstim.noise = ECL2180NOISE
+				//cstim.burstint = ECL2180BINT
+        			//cstim.burstlen = ECL2180BLEN
+				cstim.number = ECL2180NUM
+				cstim.start = ECL2180START
+				cstim.interval = ECL2180INT
+				cstim.noise = ECL2180NOISE
+        			// Use the gid-specific random generator so random streams are
+        			// independent of where and how many stims there are.
+        			cstim.noiseFromRandom(rs.r)
+        			rs.r.normal(0, 1)
+        			rs.start()
+        			cuelistECL2180.append(i)
+        			ncue += 1
+      			}
+    		}
+  	}
+  	//print "  cue size ", ncue
+}
+
+// setup activity pattern in input cue stims
+proc mkcueECL2360() {local i, j, ncue localobj cstim, target, rs
+  	print "Make cue (ECL2360) input..."
+  	cuelistECL2360 = new Vector()
+  	// open patterns file
+  	fp = new File($s1)
+  	fp.ropen()
+  	cue = new Vector(nECL2360)
+  	cue.scanf(fp, $2, $4)	// read pattern
+	//  cue.printf()
+  	fp.close()
+  	ncue = 0
+  	// find active cells in pattern
+  	for i=0, cue.size()-1 {
+    		//if (!pc.gid_exists(i+iECL2360)) { continue }
+    		if (ncue <= SPATT*$3) { 	// fraction of active cells in cue
+      			if (cue.x[i] == 1) {
+        			print "Cue cell ", i
+        			//cstim = pc.gid2cell(i+iECL2360)
+        			cstim = cells.object(i+iECL2360).stim
+        			for j=0, cells.count-1 {
+          				if (gidvec.x[j] == i+iECL2360) {break}	// find cell index
+        			}
+    				rs = ranlist.object(j)
+        			// create cue stimulus
+				//cstim.number = ECL2360NUM
+				//cstim.start = ECL2360START
+				//cstim.interval = ECL2360INT
+				//cstim.noise = ECL2360NOISE
+				//cstim.burstint = ECL2360BINT
+        			//cstim.burstlen = ECL2360BLEN
+				cstim.number = ECL2360NUM
+				cstim.start = ECL2360START
+				cstim.interval = ECL2360INT
+				cstim.noise = ECL2360NOISE
+        			// Use the gid-specific random generator so random streams are
+        			// independent of where and how many stims there are.
+        			cstim.noiseFromRandom(rs.r)
+        			rs.r.normal(0, 1)
+        			rs.start()
+        			cuelistECL2360.append(i)
+        			ncue += 1
+      			}
+    		}
+  	}
+  	//print "  cue size ", ncue
+}
+
+// setup activity pattern in input cue stims
+proc mkcueECL3180() {local i, j, ncue localobj cstim, target, rs
+  	print "Make cue (ECL3180) input..."
+  	cuelistECL3180 = new Vector()
+  	// open patterns file
+  	fp = new File($s1)
+  	fp.ropen()
+  	cue = new Vector(nECL3180)
+  	cue.scanf(fp, $2, $4)	// read pattern
+	//  cue.printf()
+  	fp.close()
+  	ncue = 0
+  	// find active cells in pattern
+  	for i=0, cue.size()-1 {
+    		//if (!pc.gid_exists(i+iECL3180)) { continue }
+    		if (ncue <= SPATT*$3) { 	// fraction of active cells in cue
+      			if (cue.x[i] == 1) {
+        			print "Cue cell ", i
+        			//cstim = pc.gid2cell(i+iECL3180)
+        			cstim = cells.object(i+iECL3180).stim
+        			for j=0, cells.count-1 {
+          				if (gidvec.x[j] == i+iECL3180) {break}	// find cell index
+        			}
+    				rs = ranlist.object(j)
+        			// create cue stimulus
+				//cstim.number = ECL3180NUM
+				//cstim.start = ECL3180START
+				//cstim.interval = ECL3180INT
+				//cstim.noise = ECL3180NOISE
+				//cstim.burstint = ECL3180BINT
+        			//cstim.burstlen = ECL3180BLEN
+				cstim.number = ECL3180NUM
+				cstim.start = ECL3180START
+				cstim.interval = ECL3180INT
+				cstim.noise = ECL3180NOISE
+        			// Use the gid-specific random generator so random streams are
+        			// independent of where and how many stims there are.
+        			cstim.noiseFromRandom(rs.r)
+        			rs.r.normal(0, 1)
+        			rs.start()
+        			cuelistECL3180.append(i)
+        			ncue += 1
+      			}
+    		}
+  	}
+  	//print "  cue size ", ncue
+}
+
+// setup activity pattern in input cue stims
+proc mkcueECL3360() {local i, j, ncue localobj cstim, target, rs
+  	print "Make cue (ECL3360) input..."
+  	cuelistECL3360 = new Vector()
+  	// open patterns file
+  	fp = new File($s1)
+  	fp.ropen()
+  	cue = new Vector(nECL3360)
+  	cue.scanf(fp, $2, $4)	// read pattern
+	//  cue.printf()
+  	fp.close()
+  	ncue = 0
+  	// find active cells in pattern
+  	for i=0, cue.size()-1 {
+    		//if (!pc.gid_exists(i+iECL3360)) { continue }
+    		if (ncue <= SPATT*$3) { 	// fraction of active cells in cue
+      			if (cue.x[i] == 1) {
+        			print "Cue cell ", i
+        			//cstim = pc.gid2cell(i+iECL3360)
+        			cstim = cells.object(i+iECL3360).stim
+        			for j=0, cells.count-1 {
+          				if (gidvec.x[j] == i+iECL3360) {break}	// find cell index
+        			}
+    				rs = ranlist.object(j)
+        			// create cue stimulus
+				//cstim.number = ECL3360NUM
+				//cstim.start = ECL3360START
+				//cstim.interval = ECL3360INT
+				//cstim.noise = ECL3360NOISE
+				//cstim.burstint = ECL3360BINT
+        			//cstim.burstlen = ECL3360BLEN
+				cstim.number = ECL3360NUM
+				cstim.start = ECL3360START
+				cstim.interval = ECL3360INT
+				cstim.noise = ECL3360NOISE
+        			// Use the gid-specific random generator so random streams are
+        			// independent of where and how many stims there are.
+        			cstim.noiseFromRandom(rs.r)
+        			rs.r.normal(0, 1)
+        			rs.start()
+        			cuelistECL3360.append(i)
+        			ncue += 1
+      			}
+    		}
+  	}
+  	//print "  cue size ", ncue
+}
+
+
+// remove activity pattern in input cue stims
+proc erasecue() {local i, j localobj cstim
+  	for i=0, cuelist.size()-1 {
+    		//if (!pc.gid_exists(i+iCA3)) { continue }
+    		//cstim = pc.gid2cell(i+iCA3)
+    		cstim = cells.object(cuelist.x[i]+iCA3).stim
+    		cstim.number = 0
+  	}
+}
+
+
+mkcueECL2180(FDGPATT, CPATT, CFRAC, NPATT)	// cue from already stored pattern
+//mkcueECL2180(FDGSTORE, CPATT, CFRAC, NSTORE)	// cue from new pattern
+mkcueECL2360(FDGPATT, CPATT, CFRAC, NPATT)	// cue from already stored pattern
+//mkcueECL2360(FDGSTORE, CPATT, CFRAC, NSTORE)	// cue from new pattern
+
+//mkcueECL3180(FCA1PATT, CPATT, CFRAC, NPATT)	// cue from already stored pattern
+////mkcueECL3180(FCA1STORE, CPATT, CFRAC, NSTORE)	// cue from new pattern
+//mkcueECL3360(FCA1PATT, CPATT, CFRAC, NPATT)	// cue from already stored pattern
+////mkcueECL3360(FCA1STORE, CPATT, CFRAC, NSTORE)	// cue from new pattern
+
+mkEC()
+//mkECL2()
+//mkECL3()
+
+
+// Spike recording
+objref tvec, idvec  // will be Vectors that record all spike times (tvec)
+        // and the corresponding id numbers of the cells that spiked (idvec)
+proc spikerecord() {local i  localobj nc, nil
+  print "Record spikes..."
+  tvec = new Vector()
+  idvec = new Vector()
+  for i=0, cells.count-1 {
+    nc = cells.object(i).connect2target(nil)
+    nc.record(tvec, idvec, i)
+    // the Vector will continue to record spike times
+    // even after the NetCon has been destroyed
+  }
+}
+
+spikerecord()
+
+
+// Record cell voltage traces
+objref vDGGC, vDGBC, vDGMC, vDGHC  			// Vectors that record voltages from DG-GC, DG-MC, DG-BC, DG-HC
+objref vCA3PC, vCA3AAC, vCA3BC, vCA3OLM  		// Vectors that record voltages from CA3-PC, CA3-AAC, CA3-BC, CA3-OLM
+objref vCA1PC, vCA1AAC, vCA1BC, vCA1BSC, vCA1OLM  	// Vectors that record voltages from CA1-PC, CA1-AAC, CA1-BC, CA1-BSC, CA1-OLM
+
+proc vrecord() {local i, gid 
+  	print "Record example voltage traces..."
+  	for i=0, cells.count-1 {	// loop over possible target cells
+    		gid = gidvec.x[i]	// id of cell
+    		if (gid==iDGGC+32) {
+      			vDGGC = new Vector()
+      			vDGGC.record(&cells.object(i).soma.v(0.5))
+    		}
+    		if (gid==iDGMC) {
+      			vDGMC = new Vector()
+      			vDGMC.record(&cells.object(i).soma.v(0.5))
+    		}
+    		if (gid==iDGBC) {
+      			vDGBC = new Vector()
+      			vDGBC.record(&cells.object(i).soma.v(0.5))
+    		}
+    		if (gid==iDGHC) {
+      			vDGHC = new Vector()
+      			vDGHC.record(&cells.object(i).soma.v(0.5))
+    		}
+    		if (gid==iCA3PC+1) {
+      			vCA3PC = new Vector()
+      			vCA3PC.record(&cells.object(i).soma.v(0.5))
+    		}
+    		if (gid==iCA3AAC) {
+      			vCA3AAC = new Vector()
+      			vCA3AAC.record(&cells.object(i).soma.v(0.5))
+    		}
+    		if (gid==iCA3BC) {
+      			vCA3BC = new Vector()
+      			vCA3BC.record(&cells.object(i).soma.v(0.5))
+    		}
+    		if (gid==iCA3OLM) {
+      			vCA3OLM = new Vector()
+      			vCA3OLM.record(&cells.object(i).soma.v(0.5))
+    		}    
+    		if (gid==iCA1PC+8) {
+      			vCA1PC = new Vector()
+      			vCA1PC.record(&cells.object(i).soma.v(0.5))
+    		}
+    		if (gid==iCA1AAC) {
+      			vCA1AAC = new Vector()
+      			vCA1AAC.record(&cells.object(i).soma.v(0.5))
+    		}
+    		if (gid==iCA1BC) {
+      			vCA1BC = new Vector()
+      			vCA1BC.record(&cells.object(i).soma.v(0.5))
+    		}
+    		if (gid==iCA1BSC) {
+      			vCA1BSC = new Vector()
+      			vCA1BSC.record(&cells.object(i).soma.v(0.5))
+    		}
+//    		if (gid==iCA1OLM) {
+//      			vCA1OLM = new Vector()
+//      			vCA1OLM.record(&cells.object(i).soma.v(0.5))
+//    		}  		
+  	}
+}
+
+vrecord()
+
+
+// Record CA1 pyramidal cell voltage traces
+objref vCA1PC_soma, vCA1PC_lm_thick, vCA1PC_radTprox, vCA1PC_radTdist, vCA1PC_radTmed
+
+proc vCA1PCrecord() {local i, gid 
+  	print "Record example voltage traces..."
+  	for i=0, cells.count-1 {	// loop over possible target cells
+    		gid = gidvec.x[i]	// id of cell   
+    		if (gid==iCA1PC+8) {
+      			vCA1PC_soma = new Vector()
+      			vCA1PC_soma.record(&cells.object(i).soma.v(0.5))
+      			vCA1PC_lm_thick = new Vector()
+      			vCA1PC_lm_thick.record(&cells.object(i).lm_thick1.v(0.5))
+      			vCA1PC_radTprox = new Vector()
+      			vCA1PC_radTprox.record(&cells.object(i).radTprox.v(0.5))
+      			vCA1PC_radTmed = new Vector()
+      			vCA1PC_radTmed.record(&cells.object(i).radTmed.v(0.5))
+      			vCA1PC_radTdist = new Vector()
+      			vCA1PC_radTdist.record(&cells.object(i).radTdist.v(0.5))      			
+    		}	
+  	}
+}
+
+vCA1PCrecord()
+
+
+////////////////////////////
+// Simulation control
+////////////////////////////
+
+strdef fstem
+fstem = "Results/Results_DG_CA3_CA1_w_inhibition"
+
+tstop = SIMDUR
+celsius = 34
+
+//run()
+
+
+
+////////////////////////////
+// Report simulation results
+////////////////////////////
+
+objref fo
+strdef fno
+
+proc spikeout() { local i  
+  	printf("\ntime\t cell\n")  // print header once
+  	sprint(fno,"%s_spt.dat", fstem)
+  	fo = new File(fno)
+  	fo.wopen()
+  	for i=0, tvec.size-1 {
+    		printf("%g\t %d\n", tvec.x[i], idvec.x[i])
+    		fo.printf("%g\t %d\n", tvec.x[i], idvec.x[i])
+  	}
+  	fo.close()
+}
+
+
+proc vout() { local i, j, gid
+  
+	for j=0, cells.count-1 {	// loop over possible target cells
+    		gid = gidvec.x[j]	// id of cell
+
+//    		if (gid==iDGGC) {
+    		if (gid==iDGGC+32) {
+      			sprint(fno,"%s_DGGC.dat", fstem)
+      			fo = new File(fno)
+      			fo.wopen()
+      			for i=0, vDGGC.size-1 {
+        			fo.printf("%g\n", vDGGC.x[i])
+      			}
+      			fo.close()
+    		} 
+    
+    		if (gid==iDGMC) {
+      			sprint(fno,"%s_DGMC.dat", fstem)
+      			fo = new File(fno)
+      			fo.wopen()
+      			for i=0, vDGMC.size-1 {
+        			fo.printf("%g\n", vDGMC.x[i])
+      			}
+      			fo.close()
+    		} 
+    
+    		if (gid==iDGBC) {
+      			sprint(fno,"%s_DGBC.dat", fstem)
+      			fo = new File(fno)
+      			fo.wopen()
+      			for i=0, vDGBC.size-1 {
+        			fo.printf("%g\n", vDGBC.x[i])
+      			}
+      			fo.close()
+    		}
+
+    		if (gid==iDGHC) {
+      			sprint(fno,"%s_DGHC.dat", fstem)
+      			fo = new File(fno)
+      			fo.wopen()
+      			for i=0, vDGHC.size-1 {
+        			fo.printf("%g\n", vDGHC.x[i])
+      			}
+      			fo.close()
+    		}
+    		
+		if (gid==iCA3PC+1) {
+      			sprint(fno,"%s_CA3PC.dat", fstem)
+      			fo = new File(fno)
+      			fo.wopen()
+      			for i=0, vCA3PC.size-1 {
+        			fo.printf("%g\n", vCA3PC.x[i])
+      			}
+      			fo.close()
+    		} 
+    
+    		if (gid==iCA3AAC) {
+      			sprint(fno,"%s_CA3AAC.dat", fstem)
+      			fo = new File(fno)
+      			fo.wopen()
+      			for i=0, vCA3AAC.size-1 {
+        			fo.printf("%g\n", vCA3AAC.x[i])
+      			}
+      			fo.close()
+    		} 
+    
+    		if (gid==iCA3BC) {
+      			sprint(fno,"%s_CA3BC.dat", fstem)
+      			fo = new File(fno)
+      			fo.wopen()
+      			for i=0, vCA3BC.size-1 {
+        			fo.printf("%g\n", vCA3BC.x[i])
+      			}
+      			fo.close()
+    		}
+
+    		if (gid==iCA3OLM) {
+      			sprint(fno,"%s_CA3OLM.dat", fstem)
+      			fo = new File(fno)
+      			fo.wopen()
+      			for i=0, vCA3OLM.size-1 {
+        			fo.printf("%g\n", vCA3OLM.x[i])
+      			}
+      			fo.close()
+    		}
+
+		if (gid==iCA1PC+8) {
+      			sprint(fno,"%s_CA1PC.dat", fstem)
+      			fo = new File(fno)
+      			fo.wopen()
+      			for i=0, vCA1PC.size-1 {
+        			fo.printf("%g\n", vCA1PC.x[i])
+      			}
+      			fo.close()
+    		} 
+    
+    		if (gid==iCA1AAC) {
+      			sprint(fno,"%s_CA1AAC.dat", fstem)
+      			fo = new File(fno)
+      			fo.wopen()
+      			for i=0, vCA1AAC.size-1 {
+        			fo.printf("%g\n", vCA1AAC.x[i])
+      			}
+      			fo.close()
+    		} 
+    
+    		if (gid==iCA1BC) {
+      			sprint(fno,"%s_CA1BC.dat", fstem)
+      			fo = new File(fno)
+      			fo.wopen()
+      			for i=0, vCA1BC.size-1 {
+        			fo.printf("%g\n", vCA1BC.x[i])
+      			}
+      			fo.close()
+    		}
+
+    		if (gid==iCA1BSC) {
+      			sprint(fno,"%s_CA1BSC.dat", fstem)
+      			fo = new File(fno)
+      			fo.wopen()
+      			for i=0, vCA1BSC.size-1 {
+        			fo.printf("%g\n", vCA1BSC.x[i])
+      			}
+      			fo.close()
+    		}
+
+//    		if (gid==iCA1OLM) {
+//      			sprint(fno,"%s_CA1OLM.dat", fstem)
+//      			fo = new File(fno)
+//      			fo.wopen()
+//      			for i=0, vCA1OLM.size-1 {
+//        			fo.printf("%g\n", vCA1OLM.x[i])
+//      			}
+//      			fo.close()
+//    		}    
+  	}
+}
+
+
+proc vCA1PCout() { local i, j, gid
+  
+	for j=0, cells.count-1 {	// loop over possible target cells
+    		gid = gidvec.x[j]	// id of cell
+		if (gid==iCA1PC+8) {
+      			sprint(fno,"%s_CA1PCsoma.dat", fstem)
+      			fo = new File(fno)
+      			fo.wopen()
+      			for i=0, vCA1PC_soma.size-1 {
+        			fo.printf("%g\n", vCA1PC_soma.x[i])
+      			}
+      			fo.close()
+      			
+      			sprint(fno,"%s_CA1PCradTprox.dat", fstem)
+      			fo = new File(fno)
+      			fo.wopen()
+      			for i=0, vCA1PC_radTprox.size-1 {
+        			fo.printf("%g\n", vCA1PC_radTprox.x[i])
+      			}
+      			fo.close()
+
+      			sprint(fno,"%s_CA1PCradTmed.dat", fstem)
+      			fo = new File(fno)
+      			fo.wopen()
+      			for i=0, vCA1PC_radTmed.size-1 {
+        			fo.printf("%g\n", vCA1PC_radTmed.x[i])
+      			}
+      			fo.close()
+
+      			sprint(fno,"%s_CA1PCradTdist.dat", fstem)
+      			fo = new File(fno)
+      			fo.wopen()
+      			for i=0, vCA1PC_radTdist.size-1 {
+        			fo.printf("%g\n", vCA1PC_radTdist.x[i])
+      			}
+      			fo.close()
+      			
+      			sprint(fno,"%s_CA1PClmthick.dat", fstem)
+      			fo = new File(fno)
+      			fo.wopen()
+      			for i=0, vCA1PC_lm_thick.size-1 {
+        			fo.printf("%g\n", vCA1PC_lm_thick.x[i])
+      			}
+      			fo.close()
+    		}    
+  	}
+}
+
+
+// produce raster plot of spiking activity
+objref gs
+proc spikeplot() { local i
+  	gs = new Graph()
+  	gs.size(0, tstop, -1, ntot)
+  	for i=0, tvec.size-1 {
+    		gs.mark(tvec.x[i], idvec.x[i], "|", 8)
+  	}
+  	gs.flush()
+}
+
+// panel for simulation results
+proc xspikeres() {
+  	xpanel("Spike results")
+  	xbutton("Write voltages out", "vout()")
+  	xbutton("Write CA1 PC voltages out", "vCA1PCout()")
+  	xbutton("Write spikes out", "spikeout()")
+  	xbutton("Plot", "spikeplot()")
+  	xpanel()
+}
+
+xspikeres()
